@@ -11,6 +11,42 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKGEJX8JgeRV4D023PgUWZr-qU3cNzpFI",
+            authDomain: "thaisdenisyfotografa-bdb29.firebaseapp.com",
+            projectId: "thaisdenisyfotografa-bdb29",
+            storageBucket: "thaisdenisyfotografa-bdb29.firebasestorage.app",
+            messagingSenderId: "387495783003",
+            appId: "1:387495783003:web:cba53abb189132bc87ed7e",
+            measurementId: "G-VY6YTH63HB"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+
+            window.firebaseReady = new Promise(async (resolve) => {
+                try {
+                    const credential = await signInAnonymously(auth);
+                    resolve({ db, auth, uid: credential.user.uid });
+                } catch (error) {
+                    console.error("Firebase Auth error:", error);
+                    resolve(null);
+                }
+            });
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            window.firebaseReady = Promise.resolve(null);
+        }
+    </script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -117,7 +153,7 @@
                     <span class="block italic font-light text-brand-gray-dark text-3xl sm:text-4xl mt-2">Fotografia</span>
                 </h1>
                 <p class="mt-4 text-xl sm:text-2xl text-brand-gray-dark font-light mb-10 max-w-2xl mx-auto">
-                     Momentos eternos, memórias vivas.
+                    ✨ Momentos eternos, memórias vivas.
                 </p>
                 <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-6">
                     <button onclick="openBookingModal()" class="w-full sm:w-auto bg-brand-black text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-brand-gray-dark transition-all duration-300 shadow-xl">
@@ -209,8 +245,8 @@
                 <div class="bg-brand-gray-light rounded-3xl shadow-2xl p-8 md:p-12 border border-gray-100">
                     <div class="flex justify-between items-center mb-10 pb-6 border-b border-gray-300">
                         <div>
-                            <h2 class="font-serif text-3xl font-bold text-brand-black">Painel Administrativo</h2>
-                            <p class="text-brand-gray-dark mt-2 text-sm">Gerencie fotos e conteúdos do seu site instantaneamente.</p>
+                            <h2 class="font-serif text-3xl font-bold text-brand-black">Painel Administrativo Cloud</h2>
+                            <p class="text-brand-gray-dark mt-2 text-sm">Gerencie fotos e conteúdos em tempo real para todos os clientes.</p>
                         </div>
                         <button onclick="logoutAdmin()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors">Sair do Painel</button>
                     </div>
@@ -220,18 +256,11 @@
                             <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-image mr-2 text-brand-gray-dark"></i> Foto Capa (Início)</h3>
                             <form id="edit-home-form" class="space-y-4 bg-white p-5 rounded-2xl shadow-sm">
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Escolher imagem do computador</label>
-                                    <input type="file" id="admin-home-file" accept="image/*" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm bg-white">
-                                </div>
-                                <div id="home-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                                    <img id="home-upload-preview-img" src="" alt="Prévia da capa" class="w-full h-40 object-cover">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Ou usar URL da imagem</label>
-                                    <input type="url" id="admin-home-img" placeholder="https://..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                    <label class="block text-xs font-medium text-brand-black mb-1">URL da Imagem</label>
+                                    <input type="url" id="admin-home-img" required class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
                                 </div>
                                 <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
-                                    <i class="fas fa-save mr-2"></i> Salvar Capa Início
+                                    Salvar Capa Início
                                 </button>
                             </form>
                             <div id="home-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
@@ -241,18 +270,11 @@
                             <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-images mr-2 text-brand-gray-dark"></i> Capa do Portfólio</h3>
                             <form id="edit-portfolio-form" class="space-y-4 bg-white p-5 rounded-2xl shadow-sm">
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Escolher imagem do computador</label>
-                                    <input type="file" id="admin-portfolio-file" accept="image/*" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm bg-white">
-                                </div>
-                                <div id="portfolio-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                                    <img id="portfolio-upload-preview-img" src="" alt="Prévia da capa do portfólio" class="w-full h-40 object-cover">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Ou usar URL da imagem</label>
-                                    <input type="url" id="admin-portfolio-img" placeholder="https://..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                    <label class="block text-xs font-medium text-brand-black mb-1">URL da Imagem</label>
+                                    <input type="url" id="admin-portfolio-img" required class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
                                 </div>
                                 <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
-                                    <i class="fas fa-save mr-2"></i> Salvar Capa Portfólio
+                                    Salvar Capa Portfólio
                                 </button>
                             </form>
                             <div id="portfolio-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
@@ -262,22 +284,15 @@
                             <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-user-edit mr-2 text-brand-gray-dark"></i> Perfil & Sobre</h3>
                             <form id="edit-about-form" class="space-y-3 bg-white p-5 rounded-2xl shadow-sm">
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Escolher foto do computador</label>
-                                    <input type="file" id="admin-about-file" accept="image/*" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm bg-white">
-                                </div>
-                                <div id="about-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                                    <img id="about-upload-preview-img" src="" alt="Prévia da foto de perfil" class="w-full h-40 object-cover">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Ou usar URL da foto</label>
-                                    <input type="url" id="admin-about-img" placeholder="https://..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                    <label class="block text-xs font-medium text-brand-black mb-1">URL Foto Perfil</label>
+                                    <input type="url" id="admin-about-img" required class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-brand-black mb-1">Texto de Apresentação</label>
                                     <textarea id="admin-about-text" required rows="3" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm resize-none"></textarea>
                                 </div>
                                 <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
-                                    <i class="fas fa-save mr-2"></i> Salvar Sobre
+                                    Salvar Sobre
                                 </button>
                             </form>
                             <div id="about-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
@@ -448,38 +463,60 @@
 
         let currentSiteData = JSON.parse(JSON.stringify(defaultSiteData));
 
-        function loadSavedData() {
-            try {
-                const saved = localStorage.getItem('thais_denisy_site_data');
-                if (saved) {
-                    currentSiteData = JSON.parse(saved);
-                }
-            } catch (e) {
-                console.error("Error loading local data:", e);
-            }
-        }
-
-        function saveSiteData(data) {
-            currentSiteData = data;
-            try {
-                localStorage.setItem('thais_denisy_site_data', JSON.stringify(data));
-            } catch (e) {
-                console.error("Error saving local data:", e);
-            }
-            renderSiteContent();
-        }
-
         function getSiteData() {
             return currentSiteData;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSavedData();
-            
+        const SITE_DOC_PATH = ["site", "config"];
+
+        async function saveSiteDataToCloud(data) {
+            currentSiteData = data;
+            renderSiteContent();
+            try {
+                const fb = await window.firebaseReady;
+                if (!fb) throw new Error("Firebase não está conectado.");
+
+                await setDoc(doc(fb.db, ...SITE_DOC_PATH), data, { merge: false });
+                console.log("Configurações salvas no Firestore.");
+                return true;
+            } catch (err) {
+                console.error("Erro ao salvar no Firestore:", err);
+                showAlert("Não foi possível salvar", "O Firebase não aceitou o salvamento. Verifique se o Firestore e o login anônimo estão ativados e se as regras permitem escrita.");
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
             const yearEl = document.getElementById('year');
             if (yearEl) yearEl.textContent = new Date().getFullYear();
             
-            renderSiteContent();
+            try {
+                const fb = await window.firebaseReady;
+                if (fb) {
+                    const docRef = doc(fb.db, ...SITE_DOC_PATH);
+                    onSnapshot(docRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            currentSiteData = {
+                                ...JSON.parse(JSON.stringify(defaultSiteData)),
+                                ...docSnap.data(),
+                                about: { ...defaultSiteData.about, ...(docSnap.data().about || {}) },
+                                faqs: Array.isArray(docSnap.data().faqs) ? docSnap.data().faqs : defaultSiteData.faqs
+                            };
+                            renderSiteContent();
+                        } else {
+                            saveSiteDataToCloud(defaultSiteData);
+                        }
+                    }, (error) => {
+                        console.error("Firestore snapshot error:", error);
+                        renderSiteContent();
+                    });
+                } else {
+                    renderSiteContent();
+                }
+            } catch(e) {
+                console.error("Erro ao carregar Firestore:", e);
+                renderSiteContent();
+            }
             
             const header = document.getElementById('header');
             if (header) {
@@ -772,185 +809,51 @@
             if (adminPanel) adminPanel.classList.add('hidden');
         }
 
-        function convertFileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                if (!file || !file.type.startsWith('image/')) {
-                    reject(new Error('Selecione um arquivo de imagem válido.'));
-                    return;
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                    reject(new Error('A imagem é muito grande. O limite recomendado é de 5 MB.'));
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function setupImagePreview(inputId, boxId, imageId) {
-            const input = document.getElementById(inputId);
-            const box = document.getElementById(boxId);
-            const image = document.getElementById(imageId);
-            if (!input || !box || !image) return;
-
-            input.addEventListener('change', () => {
-                const file = input.files && input.files[0];
-                if (!file) {
-                    box.classList.add('hidden');
-                    image.src = '';
-                    return;
-                }
-
-                if (!file.type.startsWith('image/')) {
-                    showAlert('Arquivo inválido', 'Escolha uma imagem JPG, PNG ou WebP.');
-                    input.value = '';
-                    box.classList.add('hidden');
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = e => {
-                    image.src = e.target.result;
-                    box.classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        setupImagePreview('admin-home-file', 'home-upload-preview', 'home-upload-preview-img');
-        setupImagePreview('admin-portfolio-file', 'portfolio-upload-preview', 'portfolio-upload-preview-img');
-        setupImagePreview('admin-about-file', 'about-upload-preview', 'about-upload-preview-img');
-
-        async function saveUploadedImageForm(options) {
-            const {
-                formId, fileId, urlId, feedbackId,
-                setData, successMessage, buttonText
-            } = options;
-
-            const form = document.getElementById(formId);
-            if (!form) return;
-
-            form.addEventListener('submit', async (e) => {
+        const editHomeForm = document.getElementById('edit-home-form');
+        if (editHomeForm) {
+            editHomeForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-
-                const fileInput = document.getElementById(fileId);
-                const urlInput = document.getElementById(urlId);
-                const button = form.querySelector('button[type="submit"]');
-                const file = fileInput?.files?.[0] || null;
-                const url = urlInput?.value.trim() || '';
-
-                try {
-                    if (!file && !url) {
-                        showAdminFeedback(feedbackId, 'Escolha uma imagem ou informe uma URL.', 'bg-yellow-100 text-yellow-800');
-                        return;
-                    }
-
-                    if (button) {
-                        button.disabled = true;
-                        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Salvando...';
-                    }
-
-                    const imageUrl = file
-                        ? await convertFileToBase64(file)
-                        : url;
-
+                const adminHomeImg = document.getElementById('admin-home-img');
+                const newHomeImg = adminHomeImg ? adminHomeImg.value.trim() : '';
+                if (newHomeImg) {
                     const data = JSON.parse(JSON.stringify(getSiteData()));
-                    setData(data, imageUrl);
-                    saveSiteData(data);
-
-                    if (fileInput) fileInput.value = '';
-                    showAdminFeedback(feedbackId, successMessage, 'bg-green-100 text-green-800');
-                } catch (error) {
-                    console.error('Erro no upload:', error);
-                    showAdminFeedback(
-                        feedbackId,
-                        error?.message || 'Não foi possível salvar a imagem.',
-                        'bg-red-100 text-red-800'
-                    );
-                } finally {
-                    if (button) {
-                        button.disabled = false;
-                        button.innerHTML = `<i class="fas fa-save mr-2"></i> ${buttonText}`;
-                    }
+                    data.homePhoto = newHomeImg;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('home-feedback', 'Capa do início salva para todos!', 'bg-green-100 text-green-800');
                 }
             });
         }
 
-        saveUploadedImageForm({
-            formId: 'edit-home-form',
-            fileId: 'admin-home-file',
-            urlId: 'admin-home-img',
-            feedbackId: 'home-feedback',
-            setData: (data, url) => { data.homePhoto = url; },
-            successMessage: 'Capa do início salva com sucesso!',
-            buttonText: 'Salvar Capa Início'
-        });
-
-        saveUploadedImageForm({
-            formId: 'edit-portfolio-form',
-            fileId: 'admin-portfolio-file',
-            urlId: 'admin-portfolio-img',
-            feedbackId: 'portfolio-feedback',
-            setData: (data, url) => { data.portfolioPhoto = url; },
-            successMessage: 'Capa do portfólio salva com sucesso!',
-            buttonText: 'Salvar Capa Portfólio'
-        });
+        const editPortfolioForm = document.getElementById('edit-portfolio-form');
+        if (editPortfolioForm) {
+            editPortfolioForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const adminPortfolioImg = document.getElementById('admin-portfolio-img');
+                const newPortImg = adminPortfolioImg ? adminPortfolioImg.value.trim() : '';
+                if (newPortImg) {
+                    const data = JSON.parse(JSON.stringify(getSiteData()));
+                    data.portfolioPhoto = newPortImg;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('portfolio-feedback', 'Capa do portfólio salva para todos!', 'bg-green-100 text-green-800');
+                }
+            });
+        }
 
         const editAboutForm = document.getElementById('edit-about-form');
         if (editAboutForm) {
-            editAboutForm.addEventListener('submit', async (e) => {
+            editAboutForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-
-                const fileInput = document.getElementById('admin-about-file');
-                const urlInput = document.getElementById('admin-about-img');
-                const textInput = document.getElementById('admin-about-text');
-                const button = editAboutForm.querySelector('button[type="submit"]');
-                const file = fileInput?.files?.[0] || null;
-                const url = urlInput?.value.trim() || '';
-                const text = textInput?.value.trim() || '';
-
-                try {
-                    if (!file && !url) {
-                        showAdminFeedback('about-feedback', 'Escolha uma foto ou informe uma URL.', 'bg-yellow-100 text-yellow-800');
-                        return;
-                    }
-
-                    if (!text) {
-                        showAdminFeedback('about-feedback', 'Preencha o texto de apresentação.', 'bg-yellow-100 text-yellow-800');
-                        return;
-                    }
-
-                    if (button) {
-                        button.disabled = true;
-                        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Salvando...';
-                    }
-
-                    const imageUrl = file
-                        ? await convertFileToBase64(file)
-                        : url;
-
+                const adminAboutImg = document.getElementById('admin-about-img');
+                const adminAboutText = document.getElementById('admin-about-text');
+                const newPhoto = adminAboutImg ? adminAboutImg.value.trim() : '';
+                const newText = adminAboutText ? adminAboutText.value.trim() : '';
+                
+                if (newPhoto && newText) {
                     const data = JSON.parse(JSON.stringify(getSiteData()));
-                    data.about.photoUrl = imageUrl;
-                    data.about.text = text;
-
-                    saveSiteData(data);
-
-                    if (fileInput) fileInput.value = '';
-                    showAdminFeedback('about-feedback', 'Foto e perfil salvos com sucesso!', 'bg-green-100 text-green-800');
-                } catch (error) {
-                    console.error('Erro no upload da foto de perfil:', error);
-                    showAdminFeedback(
-                        'about-feedback',
-                        error?.message || 'Não foi possível salvar a imagem.',
-                        'bg-red-100 text-red-800'
-                    );
-                } finally {
-                    if (button) {
-                        button.disabled = false;
-                        button.innerHTML = '<i class="fas fa-save mr-2"></i> Salvar Sobre';
-                    }
+                    data.about.photoUrl = newPhoto;
+                    data.about.text = newText;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('about-feedback', 'Perfil salvo para todos!', 'bg-green-100 text-green-800');
                 }
             });
         }
@@ -968,9 +871,9 @@
                     const data = JSON.parse(JSON.stringify(getSiteData()));
                     if (!data.faqs) data.faqs = [];
                     data.faqs.push({ question: question, answer: answer });
-                    saveSiteData(data);
+                    saveSiteDataToCloud(data);
                     addFaqForm.reset();
-                    showAdminFeedback('faq-feedback', 'Dúvida adicionada com sucesso!', 'bg-green-100 text-green-800');
+                    showAdminFeedback('faq-feedback', 'Dúvida adicionada para todos!', 'bg-green-100 text-green-800');
                 }
             });
         }
@@ -1022,7 +925,7 @@
             const data = JSON.parse(JSON.stringify(getSiteData()));
             if (!data.faqs) data.faqs = [...defaultSiteData.faqs];
             data.faqs.splice(index, 1);
-            saveSiteData(data);
+            saveSiteDataToCloud(data);
         }
     </script>
 </body>
