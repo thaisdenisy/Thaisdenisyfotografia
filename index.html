@@ -17,7 +17,7 @@
        FIREBASE IMPORTS & CONFIGURATION
     ========================================================= */
 
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
@@ -43,7 +43,12 @@
     let storage;
 
     try {
-        app = initializeApp(firebaseConfig);
+        const existingApps = getApps();
+        if (existingApps.length > 0) {
+            app = existingApps[0];
+        } else {
+            app = initializeApp(firebaseConfig);
+        }
         db = getFirestore(app);
         auth = getAuth(app);
         storage = getStorage(app);
@@ -61,11 +66,21 @@
         }
 
         try {
+            if (auth.currentUser) {
+                resolve({ app, db, auth, storage, appId, user: auth.currentUser });
+                return;
+            }
+
             if (
                 typeof __initial_auth_token !== "undefined" &&
                 __initial_auth_token
             ) {
-                await signInWithCustomToken(auth, __initial_auth_token);
+                try {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } catch (tokenErr) {
+                    console.warn("Custom token falhou, tentando login anônimo...", tokenErr);
+                    await signInAnonymously(auth);
+                }
             } else {
                 await signInAnonymously(auth);
             }
@@ -82,8 +97,15 @@
             });
 
         } catch (error) {
-            console.error("Erro no login do Firebase:", error);
-            resolve(null);
+            console.warn("Aviso na autenticação do Firebase (usando modo offline/fallback):", error);
+            resolve({
+                app,
+                db,
+                auth,
+                storage,
+                appId,
+                user: auth?.currentUser || null
+            });
         }
     });
 
@@ -181,13 +203,14 @@
         }
 
         const fb = await window.firebaseReady;
-        if (!fb || !fb.user) {
-            throw new Error("O Firebase ainda não está conectado.");
+        if (!fb || !fb.storage) {
+            throw new Error("O Firebase Storage não está disponível.");
         }
 
+        const uid = fb.user ? fb.user.uid : "anon";
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const fileName = Date.now() + "_" + safeName;
-        const storagePath = `site/${folder}/${fb.user.uid}/${fileName}`;
+        const storagePath = `site/${folder}/${uid}/${fileName}`;
 
         const imageRef = ref(fb.storage, storagePath);
         await uploadBytes(imageRef, file, { contentType: file.type });
@@ -289,7 +312,7 @@
 
         try {
             const fb = await window.firebaseReady;
-            if (fb) {
+            if (fb && fb.db) {
                 const docRef = doc(fb.db, ...SITE_DOC_PATH);
                 onSnapshot(
                     docRef,
@@ -311,7 +334,7 @@
                         }
                     },
                     function (error) {
-                        console.error("Erro no Firestore:", error);
+                        console.warn("Aviso do Firestore (permissões ou offline):", error.message);
                         renderSiteContent();
                     }
                 );
