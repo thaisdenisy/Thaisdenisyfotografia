@@ -116,7 +116,7 @@
                     ...JSON.parse(JSON.stringify(defaultSiteData)),
                     ...parsed,
                     about: { ...defaultSiteData.about, ...(parsed.about || {}) },
-                    faqs: Array.isArray(parsed.faqs) ? parsed.faqs : defaultSiteData.faqs
+                    faqs: Array.isArray(parsed.faqs) && parsed.faqs.length > 0 ? parsed.faqs : defaultSiteData.faqs
                 };
             }
         } catch (e) {}
@@ -142,7 +142,6 @@
     ========================================================= */
 
     async function saveSiteDataToCloud(data) {
-        // Salva imediatamente localmente para feedback instantâneo
         saveLocalData(data);
 
         try {
@@ -152,13 +151,13 @@
                 console.log("Salvo no Firestore com sucesso!");
             }
         } catch (error) {
-            console.warn("Salvamento local realizado com sucesso (Firestore offline/restringido).", error);
+            console.warn("Salvamento local realizado.", error);
         }
         return true;
     }
 
     /* =========================================================
-       UPLOAD DE IMAGEM PARA O FIREBASE STORAGE (COM FALLBACK)
+       UPLOAD DE IMAGEM (BASE64)
     ========================================================= */
 
     async function uploadImage(file, folder) {
@@ -172,7 +171,6 @@
             throw new Error("O arquivo selecionado não é uma imagem.");
         }
 
-        // Converte diretamente para Base64 local para evitar travamentos de rede/storage
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
@@ -257,7 +255,7 @@
         setupImagePreview("admin-portfolio-file", "portfolio-upload-preview", "portfolio-upload-preview-img");
         setupImagePreview("admin-about-file", "about-upload-preview", "about-upload-preview-img");
 
-        // Renderiza dados locais primeiro para carregamento instantâneo
+        // Renderiza os dados imediatamente na tela
         renderSiteContent();
 
         try {
@@ -276,7 +274,7 @@
                                     ...defaultSiteData.about,
                                     ...(cloudData.about || {})
                                 },
-                                faqs: Array.isArray(cloudData.faqs) ? cloudData.faqs : (loadLocalData().faqs || defaultSiteData.faqs)
+                                faqs: Array.isArray(cloudData.faqs) && cloudData.faqs.length > 0 ? cloudData.faqs : (loadLocalData().faqs || defaultSiteData.faqs)
                             };
                             saveLocalData(merged);
                         } else {
@@ -284,12 +282,12 @@
                         }
                     },
                     function (error) {
-                        console.log("Modo offline ativo (Firestore sem permissão ou regras padrão). Usando armazenamento local.");
+                        console.log("Modo offline ativo.");
                     }
                 );
             }
         } catch (error) {
-            console.log("Executando em modo local independente.");
+            console.log("Executando em modo local.");
         }
 
         const header = document.getElementById("header");
@@ -381,13 +379,13 @@
         const aboutImg = document.getElementById("about-display-img");
         const aboutText = document.getElementById("about-display-text");
 
-        if (aboutImg) aboutImg.src = data.about.photoUrl;
-        if (aboutText) aboutText.textContent = data.about.text;
+        if (aboutImg) aboutImg.src = data.about.photoUrl || defaultSiteData.about.photoUrl;
+        if (aboutText) aboutText.textContent = data.about.text || defaultSiteData.about.text;
 
         const faqList = document.getElementById("faq-list");
         if (faqList) {
             faqList.innerHTML = "";
-            const faqs = data.faqs || defaultSiteData.faqs;
+            const faqs = (Array.isArray(data.faqs) && data.faqs.length > 0) ? data.faqs : defaultSiteData.faqs;
 
             faqs.forEach(function (faq, index) {
                 const item = document.createElement("div");
