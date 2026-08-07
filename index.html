@@ -473,7 +473,7 @@
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-        const WHATSAPP_NUMBER = "5516994137996";
+         const WHATSAPP_NUMBER = "5516994137996";
         const ADMIN_PASS = "Denisy2026";
         
         const defaultSiteData = {
@@ -505,16 +505,22 @@
             return currentSiteData;
         }
 
+        const SITE_DOC_PATH = ["site", "config"];
+
         async function saveSiteDataToCloud(data) {
             currentSiteData = data;
             renderSiteContent();
             try {
                 const fb = await window.firebaseReady;
-                if (!fb) return;
-                const docRef = doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'site_content');
-                await setDoc(docRef, data);
+                if (!fb) throw new Error("Firebase não está conectado.");
+
+                await setDoc(doc(fb.db, ...SITE_DOC_PATH), data, { merge: false });
+                console.log("Configurações salvas no Firestore.");
+                return true;
             } catch (err) {
-                console.error("Error saving to cloud:", err);
+                console.error("Erro ao salvar no Firestore:", err);
+                showAlert("Não foi possível salvar", "O Firebase não aceitou o salvamento. Verifique se o Firestore e o login anônimo estão ativados e se as regras permitem escrita.");
+                return false;
             }
         }
 
@@ -525,22 +531,28 @@
             try {
                 const fb = await window.firebaseReady;
                 if (fb) {
-                    const docRef = doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'site_content');
+                    const docRef = doc(fb.db, ...SITE_DOC_PATH);
                     onSnapshot(docRef, (docSnap) => {
                         if (docSnap.exists()) {
-                            currentSiteData = docSnap.data();
+                            currentSiteData = {
+                                ...JSON.parse(JSON.stringify(defaultSiteData)),
+                                ...docSnap.data(),
+                                about: { ...defaultSiteData.about, ...(docSnap.data().about || {}) },
+                                faqs: Array.isArray(docSnap.data().faqs) ? docSnap.data().faqs : defaultSiteData.faqs
+                            };
                             renderSiteContent();
                         } else {
                             saveSiteDataToCloud(defaultSiteData);
                         }
                     }, (error) => {
-                        console.error("Snapshot error:", error);
+                        console.error("Firestore snapshot error:", error);
                         renderSiteContent();
                     });
                 } else {
                     renderSiteContent();
                 }
             } catch(e) {
+                console.error("Erro ao carregar Firestore:", e);
                 renderSiteContent();
             }
             
@@ -835,198 +847,51 @@
             if (adminPanel) adminPanel.classList.add('hidden');
         }
 
-        // Envia uma imagem escolhida no computador para o Firebase Storage.
-        async function uploadImageToFirebase(file, folder) {
-            if (!file) return null;
-
-            if (!file.type || !file.type.startsWith('image/')) {
-                throw new Error('Selecione um arquivo de imagem válido.');
-            }
-
-            if (file.size > 10 * 1024 * 1024) {
-                throw new Error('A imagem é muito grande. O limite é de 10 MB.');
-            }
-
-            const fb = await window.firebaseReady;
-            if (!fb || !fb.storage) {
-                throw new Error('Firebase Storage não está disponível. Confira a configuração do Firebase.');
-            }
-
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const uniqueName = `${Date.now()}_${safeName}`;
-            const storageRef = ref(fb.storage, `site-images/${folder}/${uniqueName}`);
-
-            await uploadBytes(storageRef, file, {
-                contentType: file.type
-            });
-
-            return await getDownloadURL(storageRef);
-        }
-
-        function setupImagePreview(inputId, boxId, imageId) {
-            const input = document.getElementById(inputId);
-            const box = document.getElementById(boxId);
-            const image = document.getElementById(imageId);
-            if (!input || !box || !image) return;
-
-            input.addEventListener('change', () => {
-                const file = input.files && input.files[0];
-                if (!file) {
-                    box.classList.add('hidden');
-                    image.src = '';
-                    return;
-                }
-
-                if (!file.type.startsWith('image/')) {
-                    showAlert('Arquivo inválido', 'Escolha uma imagem JPG, PNG ou WebP.');
-                    input.value = '';
-                    box.classList.add('hidden');
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = e => {
-                    image.src = e.target.result;
-                    box.classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        setupImagePreview('admin-home-file', 'home-upload-preview', 'home-upload-preview-img');
-        setupImagePreview('admin-portfolio-file', 'portfolio-upload-preview', 'portfolio-upload-preview-img');
-        setupImagePreview('admin-about-file', 'about-upload-preview', 'about-upload-preview-img');
-
-        async function saveUploadedImageForm(options) {
-            const {
-                formId, fileId, urlId, folder, feedbackId,
-                getData, setData, successMessage, buttonText
-            } = options;
-
-            const form = document.getElementById(formId);
-            if (!form) return;
-
-            form.addEventListener('submit', async (e) => {
+        const editHomeForm = document.getElementById('edit-home-form');
+        if (editHomeForm) {
+            editHomeForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-
-                const fileInput = document.getElementById(fileId);
-                const urlInput = document.getElementById(urlId);
-                const button = form.querySelector('button[type="submit"]');
-                const file = fileInput?.files?.[0] || null;
-                const url = urlInput?.value.trim() || '';
-
-                try {
-                    if (!file && !url) {
-                        showAdminFeedback(feedbackId, 'Escolha uma imagem ou informe uma URL.', 'bg-yellow-100 text-yellow-800');
-                        return;
-                    }
-
-                    if (button) {
-                        button.disabled = true;
-                        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
-                    }
-
-                    const imageUrl = file
-                        ? await uploadImageToFirebase(file, folder)
-                        : url;
-
+                const adminHomeImg = document.getElementById('admin-home-img');
+                const newHomeImg = adminHomeImg ? adminHomeImg.value.trim() : '';
+                if (newHomeImg) {
                     const data = JSON.parse(JSON.stringify(getSiteData()));
-                    setData(data, imageUrl);
-                    await saveSiteDataToCloud(data);
-
-                    if (fileInput) fileInput.value = '';
-                    showAdminFeedback(feedbackId, successMessage, 'bg-green-100 text-green-800');
-                } catch (error) {
-                    console.error('Erro no upload:', error);
-                    showAdminFeedback(
-                        feedbackId,
-                        error?.message || 'Não foi possível enviar a imagem.',
-                        'bg-red-100 text-red-800'
-                    );
-                } finally {
-                    if (button) {
-                        button.disabled = false;
-                        button.innerHTML = `<i class="fas fa-cloud-upload-alt mr-2"></i> ${buttonText}`;
-                    }
+                    data.homePhoto = newHomeImg;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('home-feedback', 'Capa do início salva para todos!', 'bg-green-100 text-green-800');
                 }
             });
         }
 
-        saveUploadedImageForm({
-            formId: 'edit-home-form',
-            fileId: 'admin-home-file',
-            urlId: 'admin-home-img',
-            folder: 'home',
-            feedbackId: 'home-feedback',
-            setData: (data, url) => { data.homePhoto = url; },
-            successMessage: 'Capa do início enviada e salva com sucesso!',
-            buttonText: 'Salvar Capa Início'
-        });
-
-        saveUploadedImageForm({
-            formId: 'edit-portfolio-form',
-            fileId: 'admin-portfolio-file',
-            urlId: 'admin-portfolio-img',
-            folder: 'portfolio',
-            feedbackId: 'portfolio-feedback',
-            setData: (data, url) => { data.portfolioPhoto = url; },
-            successMessage: 'Capa do portfólio enviada e salva com sucesso!',
-            buttonText: 'Salvar Capa Portfólio'
-        });
+        const editPortfolioForm = document.getElementById('edit-portfolio-form');
+        if (editPortfolioForm) {
+            editPortfolioForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const adminPortfolioImg = document.getElementById('admin-portfolio-img');
+                const newPortImg = adminPortfolioImg ? adminPortfolioImg.value.trim() : '';
+                if (newPortImg) {
+                    const data = JSON.parse(JSON.stringify(getSiteData()));
+                    data.portfolioPhoto = newPortImg;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('portfolio-feedback', 'Capa do portfólio salva para todos!', 'bg-green-100 text-green-800');
+                }
+            });
+        }
 
         const editAboutForm = document.getElementById('edit-about-form');
         if (editAboutForm) {
-            editAboutForm.addEventListener('submit', async (e) => {
+            editAboutForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-
-                const fileInput = document.getElementById('admin-about-file');
-                const urlInput = document.getElementById('admin-about-img');
-                const textInput = document.getElementById('admin-about-text');
-                const button = editAboutForm.querySelector('button[type="submit"]');
-                const file = fileInput?.files?.[0] || null;
-                const url = urlInput?.value.trim() || '';
-                const text = textInput?.value.trim() || '';
-
-                try {
-                    if (!file && !url) {
-                        showAdminFeedback('about-feedback', 'Escolha uma foto ou informe uma URL.', 'bg-yellow-100 text-yellow-800');
-                        return;
-                    }
-
-                    if (!text) {
-                        showAdminFeedback('about-feedback', 'Preencha o texto de apresentação.', 'bg-yellow-100 text-yellow-800');
-                        return;
-                    }
-
-                    if (button) {
-                        button.disabled = true;
-                        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
-                    }
-
-                    const imageUrl = file
-                        ? await uploadImageToFirebase(file, 'about')
-                        : url;
-
+                const adminAboutImg = document.getElementById('admin-about-img');
+                const adminAboutText = document.getElementById('admin-about-text');
+                const newPhoto = adminAboutImg ? adminAboutImg.value.trim() : '';
+                const newText = adminAboutText ? adminAboutText.value.trim() : '';
+                
+                if (newPhoto && newText) {
                     const data = JSON.parse(JSON.stringify(getSiteData()));
-                    data.about.photoUrl = imageUrl;
-                    data.about.text = text;
-
-                    await saveSiteDataToCloud(data);
-
-                    if (fileInput) fileInput.value = '';
-                    showAdminFeedback('about-feedback', 'Foto e perfil salvos com sucesso!', 'bg-green-100 text-green-800');
-                } catch (error) {
-                    console.error('Erro no upload da foto de perfil:', error);
-                    showAdminFeedback(
-                        'about-feedback',
-                        error?.message || 'Não foi possível enviar a imagem.',
-                        'bg-red-100 text-red-800'
-                    );
-                } finally {
-                    if (button) {
-                        button.disabled = false;
-                        button.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i> Salvar Sobre';
-                    }
+                    data.about.photoUrl = newPhoto;
+                    data.about.text = newText;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('about-feedback', 'Perfil salvo para todos!', 'bg-green-100 text-green-800');
                 }
             });
         }
