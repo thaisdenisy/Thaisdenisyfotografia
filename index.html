@@ -11,6 +11,49 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKGEJX8JgeRV4D023PgUWZr-qU3cNzpFI",
+            authDomain: "thaisdenisyfotografa-bdb29.firebaseapp.com",
+            projectId: "thaisdenisyfotografa-bdb29",
+            storageBucket: "thaisdenisyfotografa-bdb29.firebasestorage.app",
+            messagingSenderId: "387495783003",
+            appId: "1:387495783003:web:cba53abb189132bc07ed7e",
+            measurementId: "G-VY6YTH63HB"
+        };
+
+        const appId = firebaseConfig.appId;
+
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch(e) {
+            console.error("Firebase init error:", e);
+        }
+
+        window.firebaseReady = new Promise(async (resolve) => {
+            if (!auth) { resolve(null); return; }
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                resolve({ db, auth, appId });
+            } catch (err) {
+                console.error("Auth error:", err);
+                resolve(null);
+            }
+        });
+    </script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -130,8 +173,13 @@
             </div>
         </section>
 
-        <section id="portfolio" class="py-24 bg-brand-white">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="portfolio" class="relative py-24 bg-brand-white overflow-hidden">
+            <div id="portfolio-bg-container" class="absolute inset-0 z-0 opacity-40">
+                <img id="portfolio-display-bg" src="" alt="Capa Portfólio" class="w-full h-full object-cover">
+            </div>
+            <div class="absolute inset-0 z-0 bg-white/70 backdrop-blur-sm"></div>
+
+            <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-16">
                     <h2 class="font-serif text-4xl font-bold text-brand-black mb-4">Portfólio</h2>
                     <div class="w-16 h-1 bg-brand-gray-dark mx-auto mb-6"></div>
@@ -139,16 +187,16 @@
                 </div>
 
                 <div class="max-w-2xl mx-auto">
-                    <a href="https://thaisdenisy.pixieset.com/" target="_blank" class="group block relative overflow-hidden rounded-2xl shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-brand-black">
-                        <div class="absolute inset-0 z-0 opacity-40 group-hover:opacity-50 transition-opacity duration-500">
-                            <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Portfólio Thaís Denisy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                    <a href="https://thaisdenisy.pixieset.com/" target="_blank" class="group block relative overflow-hidden rounded-2xl shadow-2xl transition-all duration-500 transform hover:-translate-y-1 bg-brand-black">
+                        <div class="absolute inset-0 z-0 opacity-50 group-hover:opacity-60 transition-opacity duration-500">
+                            <img id="portfolio-card-img" src="" alt="Portfólio Thaís Denisy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
                         </div>
                         <div class="relative z-10 p-12 text-center flex flex-col items-center justify-center min-h-[320px]">
-                            <div class="w-16 h-16 bg-white/15 backdrop-blur-md rounded-full flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-300">
+                            <div class="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-300">
                                 <i class="fas fa-images text-2xl"></i>
                             </div>
                             <h3 class="font-serif text-3xl font-bold text-white mb-3">Acessar Portfólio Completo</h3>
-                            <p class="text-gray-200 font-light max-w-md mb-8 text-sm sm:text-base">Clique aqui para abrir todas as galerias de ensaios, casamentos e retratos no Pixieset.</p>
+                            <p class="text-gray-100 font-light max-w-md mb-8 text-sm sm:text-base">Clique aqui para abrir todas as galerias de ensaios, casamentos e retratos no Pixieset.</p>
                             <span class="inline-flex items-center bg-white text-brand-black px-8 py-3.5 rounded-full font-medium text-sm shadow-lg group-hover:bg-brand-gray-light transition-colors">
                                 Visitar Pixieset <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                             </span>
@@ -200,62 +248,76 @@
         </section>
 
         <section id="admin-panel" class="hidden py-24 bg-white border-y border-gray-200">
-            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="bg-brand-gray-light rounded-3xl shadow-2xl p-8 md:p-12 border border-gray-100">
                     <div class="flex justify-between items-center mb-10 pb-6 border-b border-gray-300">
                         <div>
-                            <h2 class="font-serif text-3xl font-bold text-brand-black">Painel Administrativo</h2>
-                            <p class="text-brand-gray-dark mt-2 text-sm">Gerencie o conteúdo e todas as fotos do seu site facilmente.</p>
+                            <h2 class="font-serif text-3xl font-bold text-brand-black">Painel Administrativo Cloud</h2>
+                            <p class="text-brand-gray-dark mt-2 text-sm">Gerencie fotos e conteúdos em tempo real para todos os clientes.</p>
                         </div>
                         <button onclick="logoutAdmin()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors">Sair do Painel</button>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div>
-                            <h3 class="font-bold text-xl mb-6 flex items-center"><i class="fas fa-image mr-3 text-brand-gray-dark"></i> Editar Foto de Capa (Início)</h3>
-                            <form id="edit-home-form" class="space-y-5 bg-white p-6 rounded-2xl shadow-sm">
+                            <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-image mr-2 text-brand-gray-dark"></i> Foto Capa (Início)</h3>
+                            <form id="edit-home-form" class="space-y-4 bg-white p-5 rounded-2xl shadow-sm">
                                 <div>
-                                    <label class="block text-sm font-medium text-brand-black mb-1">URL da Imagem de Fundo (Hero)</label>
-                                    <input type="url" id="admin-home-img" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                    <label class="block text-xs font-medium text-brand-black mb-1">URL da Imagem</label>
+                                    <input type="url" id="admin-home-img" required class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
                                 </div>
-                                <button type="submit" class="w-full bg-brand-black text-white py-3 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors shadow-md">
-                                    Atualizar Capa
+                                <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
+                                    Salvar Capa Início
                                 </button>
                             </form>
-                            <div id="home-feedback" class="mt-3 hidden p-3 rounded-lg text-sm font-medium text-center"></div>
+                            <div id="home-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
                         </div>
 
                         <div>
-                            <h3 class="font-bold text-xl mb-6 flex items-center"><i class="fas fa-user-edit mr-3 text-brand-gray-dark"></i> Editar 'Sobre Mim' & Foto</h3>
-                            <form id="edit-about-form" class="space-y-5 bg-white p-6 rounded-2xl shadow-sm">
+                            <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-images mr-2 text-brand-gray-dark"></i> Capa do Portfólio</h3>
+                            <form id="edit-portfolio-form" class="space-y-4 bg-white p-5 rounded-2xl shadow-sm">
                                 <div>
-                                    <label class="block text-sm font-medium text-brand-black mb-1">URL da sua Foto de Perfil</label>
-                                    <input type="url" id="admin-about-img" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                    <label class="block text-xs font-medium text-brand-black mb-1">URL da Imagem</label>
+                                    <input type="url" id="admin-portfolio-img" required class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-brand-black mb-1">Texto de Apresentação</label>
-                                    <textarea id="admin-about-text" required rows="4" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm resize-none"></textarea>
-                                </div>
-                                <button type="submit" class="w-full bg-brand-black text-white py-3 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors shadow-md">
-                                    Salvar Alterações
+                                <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
+                                    Salvar Capa Portfólio
                                 </button>
                             </form>
-                            <div id="about-feedback" class="mt-3 hidden p-3 rounded-lg text-sm font-medium text-center"></div>
+                            <div id="portfolio-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
+                        </div>
+
+                        <div>
+                            <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-user-edit mr-2 text-brand-gray-dark"></i> Perfil & Sobre</h3>
+                            <form id="edit-about-form" class="space-y-3 bg-white p-5 rounded-2xl shadow-sm">
+                                <div>
+                                    <label class="block text-xs font-medium text-brand-black mb-1">URL Foto Perfil</label>
+                                    <input type="url" id="admin-about-img" required class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-brand-black mb-1">Texto de Apresentação</label>
+                                    <textarea id="admin-about-text" required rows="3" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm resize-none"></textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
+                                    Salvar Sobre
+                                </button>
+                            </form>
+                            <div id="about-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
                         </div>
                     </div>
 
-                    <div class="mt-16 pt-10 border-t border-gray-300">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div class="mt-12 pt-8 border-t border-gray-300">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div>
                                 <h3 class="font-bold text-xl mb-6 flex items-center"><i class="fas fa-question-circle mr-3 text-brand-gray-dark"></i> Adicionar Nova Dúvida (FAQ)</h3>
-                                <form id="add-faq-form" class="space-y-5 bg-white p-6 rounded-2xl shadow-sm">
+                                <form id="add-faq-form" class="space-y-4 bg-white p-6 rounded-2xl shadow-sm">
                                     <div>
                                         <label class="block text-sm font-medium text-brand-black mb-1">Pergunta</label>
                                         <input type="text" id="faqQuestion" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-brand-black mb-1">Resposta</label>
-                                        <textarea id="faqAnswer" required rows="4" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm resize-none"></textarea>
+                                        <textarea id="faqAnswer" required rows="3" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm resize-none"></textarea>
                                     </div>
                                     <button type="submit" class="w-full bg-brand-black text-white py-3 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors shadow-md">
                                         Adicionar Dúvida
@@ -266,7 +328,7 @@
                             
                             <div>
                                 <h3 class="font-bold text-xl mb-6 text-brand-black">Dúvidas Cadastradas</h3>
-                                <div id="admin-faqs-list" class="space-y-3 bg-white p-6 rounded-2xl shadow-sm max-h-[400px] overflow-y-auto"></div>
+                                <div id="admin-faqs-list" class="space-y-3 bg-white p-6 rounded-2xl shadow-sm max-h-[350px] overflow-y-auto"></div>
                             </div>
                         </div>
                     </div>
@@ -379,12 +441,17 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const WHATSAPP_NUMBER = "5516994137996";
         const ADMIN_PASS = "Denisy2026";
         
         const defaultSiteData = {
             homePhoto: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+            portfolioPhoto: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
             about: {
                 photoUrl: "https://images.unsplash.com/photo-1604072366595-e00508bf29db?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
                 text: "Olá! Sou Thaís Denisy, fotógrafa especializada tanto em ensaios externos quanto em fotografia de estúdio.\n\nAcredito que a fotografia é a arte de pausar o tempo. Seja na atmosfera natural e livre dos ensaios externos ou na sofisticação do estúdio, minha missão é capturar a essência verdadeira de cada momento.\n\nTransformo sentimentos em memórias vivas para você reviver para sempre!"
@@ -405,67 +472,118 @@
             ]
         };
 
+        let currentSiteData = JSON.parse(JSON.stringify(defaultSiteData));
+
         function getSiteData() {
-            const saved = localStorage.getItem('thaisSiteData');
-            return saved ? JSON.parse(saved) : defaultSiteData;
+            return currentSiteData;
         }
 
-        function saveSiteData(data) {
-            localStorage.setItem('thaisSiteData', JSON.stringify(data));
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('year').textContent = new Date().getFullYear();
+        async function saveSiteDataToCloud(data) {
+            currentSiteData = data;
             renderSiteContent();
+            try {
+                const fb = await window.firebaseReady;
+                if (!fb) return;
+                const docRef = doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'site_content');
+                await setDoc(docRef, data);
+            } catch (err) {
+                console.error("Error saving to cloud:", err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const yearEl = document.getElementById('year');
+            if (yearEl) yearEl.textContent = new Date().getFullYear();
+            
+            try {
+                const fb = await window.firebaseReady;
+                if (fb) {
+                    const docRef = doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'site_content');
+                    onSnapshot(docRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            currentSiteData = docSnap.data();
+                            renderSiteContent();
+                        } else {
+                            saveSiteDataToCloud(defaultSiteData);
+                        }
+                    }, (error) => {
+                        console.error("Snapshot error:", error);
+                        renderSiteContent();
+                    });
+                } else {
+                    renderSiteContent();
+                }
+            } catch(e) {
+                renderSiteContent();
+            }
             
             const header = document.getElementById('header');
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 20) {
-                    header.classList.add('shadow-md');
-                } else {
-                    header.classList.remove('shadow-md');
-                }
-            });
+            if (header) {
+                window.addEventListener('scroll', () => {
+                    if (window.scrollY > 20) {
+                        header.classList.add('shadow-md');
+                    } else {
+                        header.classList.remove('shadow-md');
+                    }
+                });
+            }
 
             const btn = document.getElementById('mobile-menu-btn');
             const menu = document.getElementById('mobile-menu');
-            btn.addEventListener('click', () => {
-                menu.classList.toggle('hidden');
-            });
+            if (btn && menu) {
+                btn.addEventListener('click', () => {
+                    menu.classList.toggle('hidden');
+                });
+            }
 
             checkAdminHash();
             window.addEventListener('hashchange', checkAdminHash);
         });
 
-        function showAlert(title, message) {
+        window.showAlert = function(title, message) {
             const alertEl = document.getElementById('custom-alert');
-            document.getElementById('alert-title').textContent = title;
-            document.getElementById('alert-message').textContent = message;
-            alertEl.classList.remove('hidden');
-            alertEl.classList.add('flex');
+            const alertTitle = document.getElementById('alert-title');
+            const alertMessage = document.getElementById('alert-message');
+            if (alertEl && alertTitle && alertMessage) {
+                alertTitle.textContent = title;
+                alertMessage.textContent = message;
+                alertEl.classList.remove('hidden');
+                alertEl.classList.add('flex');
+            }
         }
 
-        function closeAlert() {
-            document.getElementById('custom-alert').classList.add('hidden');
-            document.getElementById('custom-alert').classList.remove('flex');
+        window.closeAlert = function() {
+            const alertEl = document.getElementById('custom-alert');
+            if (alertEl) {
+                alertEl.classList.add('hidden');
+                alertEl.classList.remove('flex');
+            }
         }
 
         const modal = document.getElementById('booking-modal');
 
-        function openBookingModal() {
-            modal.classList.remove('hidden');
-            document.getElementById('booking-form').reset();
+        window.openBookingModal = function() {
+            if (modal) {
+                modal.classList.remove('hidden');
+                const bForm = document.getElementById('booking-form');
+                if (bForm) bForm.reset();
+            }
         }
 
-        function closeBookingModal() {
-            modal.classList.add('hidden');
+        window.closeBookingModal = function() {
+            if (modal) modal.classList.add('hidden');
         }
 
-        function submitBooking() {
-            const date = document.getElementById('b-date').value;
-            const time = document.getElementById('b-time').value;
-            const name = document.getElementById('b-name').value;
-            const desc = document.getElementById('b-desc').value;
+        window.submitBooking = function() {
+            const dateInput = document.getElementById('b-date');
+            const timeInput = document.getElementById('b-time');
+            const nameInput = document.getElementById('b-name');
+            const descInput = document.getElementById('b-desc');
+
+            const date = dateInput ? dateInput.value : '';
+            const time = timeInput ? timeInput.value : '';
+            const name = nameInput ? nameInput.value : '';
+            const desc = descInput ? descInput.value : '';
 
             if (!date || !time || !name) {
                 showAlert("Campos Obrigatórios", "Por favor, preencha a data, horário e seu nome para continuar.");
@@ -497,68 +615,94 @@
                 homeBg.onerror = () => { homeBg.src = "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"; };
             }
 
+            const portfolioBg = document.getElementById('portfolio-display-bg');
+            const portfolioCard = document.getElementById('portfolio-card-img');
+            const pPhoto = data.portfolioPhoto || defaultSiteData.portfolioPhoto;
+            if (portfolioBg) {
+                portfolioBg.src = pPhoto;
+                portfolioBg.onerror = () => { portfolioBg.src = "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"; };
+            }
+            if (portfolioCard) {
+                portfolioCard.src = pPhoto;
+                portfolioCard.onerror = () => { portfolioCard.src = "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"; };
+            }
+
             const aboutImg = document.getElementById('about-display-img');
             const aboutText = document.getElementById('about-display-text');
             
-            aboutImg.src = data.about.photoUrl;
-            aboutImg.onerror = () => { aboutImg.src = "https://placehold.co/800x1000/f3f4f6/a1a1aa?text=Sua+Foto+Aqui"; };
+            if (aboutImg) {
+                aboutImg.src = data.about.photoUrl;
+                aboutImg.onerror = () => { aboutImg.src = "https://placehold.co/800x1000/f3f4f6/a1a1aa?text=Sua+Foto+Aqui"; };
+            }
 
-            aboutText.textContent = data.about.text;
+            if (aboutText) {
+                aboutText.textContent = data.about.text;
+            }
 
             const faqList = document.getElementById('faq-list');
-            faqList.innerHTML = '';
+            if (faqList) {
+                faqList.innerHTML = '';
+                const faqsToRender = data.faqs || defaultSiteData.faqs;
+                
+                faqsToRender.forEach((faq, index) => {
+                    const faqItem = document.createElement('div');
+                    faqItem.className = 'border border-gray-200 rounded-xl bg-gray-50 overflow-hidden transition-all duration-300';
+                    
+                    const button = document.createElement('button');
+                    button.className = 'w-full text-left px-6 py-4 flex justify-between items-center focus:outline-none hover:bg-gray-100 transition-colors';
+                    button.onclick = () => toggleFaq(index);
+                    
+                    const questionSpan = document.createElement('span');
+                    questionSpan.className = 'font-semibold text-brand-black text-lg pr-4';
+                    questionSpan.textContent = faq.question;
+                    
+                    const icon = document.createElement('i');
+                    icon.id = `faq-icon-${index}`;
+                    icon.className = 'fas fa-chevron-down text-brand-gray-dark transition-transform duration-300 flex-shrink-0';
+                    
+                    button.appendChild(questionSpan);
+                    button.appendChild(icon);
+                    
+                    const answerDiv = document.createElement('div');
+                    answerDiv.id = `faq-answer-${index}`;
+                    answerDiv.className = 'max-h-0 overflow-hidden transition-all duration-300 bg-white';
+                    
+                    const answerP = document.createElement('p');
+                    answerP.className = 'p-6 text-brand-gray-dark font-light leading-relaxed whitespace-pre-line';
+                    answerP.textContent = faq.answer;
+                    
+                    answerDiv.appendChild(answerP);
+                    faqItem.appendChild(button);
+                    faqItem.appendChild(answerDiv);
+                    
+                    faqList.appendChild(faqItem);
+                });
+            }
             
-            const faqsToRender = data.faqs || defaultSiteData.faqs;
-            
-            faqsToRender.forEach((faq, index) => {
-                const faqItem = document.createElement('div');
-                faqItem.className = 'border border-gray-200 rounded-xl bg-gray-50 overflow-hidden transition-all duration-300';
-                
-                const button = document.createElement('button');
-                button.className = 'w-full text-left px-6 py-4 flex justify-between items-center focus:outline-none hover:bg-gray-100 transition-colors';
-                button.onclick = () => toggleFaq(index);
-                
-                const questionSpan = document.createElement('span');
-                questionSpan.className = 'font-semibold text-brand-black text-lg pr-4';
-                questionSpan.textContent = faq.question;
-                
-                const icon = document.createElement('i');
-                icon.id = `faq-icon-${index}`;
-                icon.className = 'fas fa-chevron-down text-brand-gray-dark transition-transform duration-300 flex-shrink-0';
-                
-                button.appendChild(questionSpan);
-                button.appendChild(icon);
-                
-                const answerDiv = document.createElement('div');
-                answerDiv.id = `faq-answer-${index}`;
-                answerDiv.className = 'max-h-0 overflow-hidden transition-all duration-300 bg-white';
-                
-                const answerP = document.createElement('p');
-                answerP.className = 'p-6 text-brand-gray-dark font-light leading-relaxed whitespace-pre-line';
-                answerP.textContent = faq.answer;
-                
-                answerDiv.appendChild(answerP);
-                faqItem.appendChild(button);
-                faqItem.appendChild(answerDiv);
-                
-                faqList.appendChild(faqItem);
-            });
-            
-            if (!document.getElementById('admin-panel').classList.contains('hidden')) {
-                document.getElementById('admin-home-img').value = data.homePhoto || defaultSiteData.homePhoto;
-                document.getElementById('admin-about-img').value = data.about.photoUrl;
-                document.getElementById('admin-about-text').value = data.about.text;
+            const adminPanel = document.getElementById('admin-panel');
+            if (adminPanel && !adminPanel.classList.contains('hidden')) {
+                const adminHomeImg = document.getElementById('admin-home-img');
+                const adminPortfolioImg = document.getElementById('admin-portfolio-img');
+                const adminAboutImg = document.getElementById('admin-about-img');
+                const adminAboutText = document.getElementById('admin-about-text');
+
+                if (adminHomeImg) adminHomeImg.value = data.homePhoto || defaultSiteData.homePhoto;
+                if (adminPortfolioImg) adminPortfolioImg.value = data.portfolioPhoto || defaultSiteData.portfolioPhoto;
+                if (adminAboutImg) adminAboutImg.value = data.about.photoUrl;
+                if (adminAboutText) adminAboutText.value = data.about.text;
                 renderAdminFaqs();
             }
         }
 
-        function toggleFaq(index) {
+        window.toggleFaq = function(index) {
             const answerDiv = document.getElementById(`faq-answer-${index}`);
             const icon = document.getElementById(`faq-icon-${index}`);
             
+            if (!answerDiv) return;
+
             if (answerDiv.style.maxHeight) {
                 answerDiv.style.maxHeight = null;
-                icon.classList.remove('rotate-180');
+                if (icon) icon.classList.remove('rotate-180');
             } else {
                 const data = getSiteData();
                 const faqsToRender = data.faqs || defaultSiteData.faqs;
@@ -573,7 +717,7 @@
                 });
                 
                 answerDiv.style.maxHeight = answerDiv.scrollHeight + "px";
-                icon.classList.add('rotate-180');
+                if (icon) icon.classList.add('rotate-180');
             }
         }
 
@@ -583,42 +727,55 @@
         function checkAdminHash() {
             if (window.location.hash === '#admin') {
                 if (!isAuthenticated) {
-                    document.getElementById('admin-password-input').value = '';
-                    loginModalAdmin.classList.remove('hidden');
-                    loginModalAdmin.classList.add('flex');
+                    const passInput = document.getElementById('admin-password-input');
+                    if (passInput) passInput.value = '';
+                    if (loginModalAdmin) {
+                        loginModalAdmin.classList.remove('hidden');
+                        loginModalAdmin.classList.add('flex');
+                    }
                 } else {
                     showAdminPanel();
                 }
             } else {
                 hideAdminPanel();
-                loginModalAdmin.classList.add('hidden');
-                loginModalAdmin.classList.remove('flex');
+                if (loginModalAdmin) {
+                    loginModalAdmin.classList.add('hidden');
+                    loginModalAdmin.classList.remove('flex');
+                }
             }
         }
 
-        function cancelAdminLogin() {
-            loginModalAdmin.classList.add('hidden');
-            loginModalAdmin.classList.remove('flex');
+        window.cancelAdminLogin = function() {
+            if (loginModalAdmin) {
+                loginModalAdmin.classList.add('hidden');
+                loginModalAdmin.classList.remove('flex');
+            }
             history.pushState("", document.title, window.location.pathname);
         }
 
-        document.getElementById('admin-password-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') verifyAdminPassword();
-        });
+        const adminPassInput = document.getElementById('admin-password-input');
+        if (adminPassInput) {
+            adminPassInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') verifyAdminPassword();
+            });
+        }
 
-        function verifyAdminPassword() {
-            const input = document.getElementById('admin-password-input').value;
+        window.verifyAdminPassword = function() {
+            const passInput = document.getElementById('admin-password-input');
+            const input = passInput ? passInput.value : '';
             if (input === ADMIN_PASS) {
                 isAuthenticated = true;
-                loginModalAdmin.classList.add('hidden');
-                loginModalAdmin.classList.remove('flex');
+                if (loginModalAdmin) {
+                    loginModalAdmin.classList.add('hidden');
+                    loginModalAdmin.classList.remove('flex');
+                }
                 showAdminPanel();
             } else {
                 showAlert("Acesso Negado", "Senha incorreta.");
             }
         }
 
-        function logoutAdmin() {
+        window.logoutAdmin = function() {
             isAuthenticated = false;
             history.pushState("", document.title, window.location.pathname);
             hideAdminPanel();
@@ -626,73 +783,112 @@
         }
 
         function showAdminPanel() {
-            document.getElementById('admin-panel').classList.remove('hidden');
-            const data = getSiteData();
-            document.getElementById('admin-home-img').value = data.homePhoto || defaultSiteData.homePhoto;
-            document.getElementById('admin-about-img').value = data.about.photoUrl;
-            document.getElementById('admin-about-text').value = data.about.text;
-            renderAdminFaqs();
-            setTimeout(() => {
-                document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
-            }, 100);
+            const adminPanel = document.getElementById('admin-panel');
+            if (adminPanel) {
+                adminPanel.classList.remove('hidden');
+                const data = getSiteData();
+                const adminHomeImg = document.getElementById('admin-home-img');
+                const adminPortfolioImg = document.getElementById('admin-portfolio-img');
+                const adminAboutImg = document.getElementById('admin-about-img');
+                const adminAboutText = document.getElementById('admin-about-text');
+
+                if (adminHomeImg) adminHomeImg.value = data.homePhoto || defaultSiteData.homePhoto;
+                if (adminPortfolioImg) adminPortfolioImg.value = data.portfolioPhoto || defaultSiteData.portfolioPhoto;
+                if (adminAboutImg) adminAboutImg.value = data.about.photoUrl;
+                if (adminAboutText) adminAboutText.value = data.about.text;
+                renderAdminFaqs();
+                setTimeout(() => {
+                    adminPanel.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
         }
         
         function hideAdminPanel() {
-            document.getElementById('admin-panel').classList.add('hidden');
+            const adminPanel = document.getElementById('admin-panel');
+            if (adminPanel) adminPanel.classList.add('hidden');
         }
 
-        document.getElementById('edit-home-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const newHomeImg = document.getElementById('admin-home-img').value.trim();
-            if (newHomeImg) {
-                const data = getSiteData();
-                data.homePhoto = newHomeImg;
-                saveSiteData(data);
-                showAdminFeedback('home-feedback', 'Foto de capa atualizada com sucesso!', 'bg-green-100 text-green-800');
-                renderSiteContent();
-            }
-        });
+        const editHomeForm = document.getElementById('edit-home-form');
+        if (editHomeForm) {
+            editHomeForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const adminHomeImg = document.getElementById('admin-home-img');
+                const newHomeImg = adminHomeImg ? adminHomeImg.value.trim() : '';
+                if (newHomeImg) {
+                    const data = JSON.parse(JSON.stringify(getSiteData()));
+                    data.homePhoto = newHomeImg;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('home-feedback', 'Capa do início salva para todos!', 'bg-green-100 text-green-800');
+                }
+            });
+        }
 
-        document.getElementById('edit-about-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const newPhoto = document.getElementById('admin-about-img').value.trim();
-            const newText = document.getElementById('admin-about-text').value.trim();
-            
-            if (newPhoto && newText) {
-                const data = getSiteData();
-                data.about.photoUrl = newPhoto;
-                data.about.text = newText;
-                saveSiteData(data);
-                showAdminFeedback('about-feedback', 'Perfil atualizado com sucesso!', 'bg-green-100 text-green-800');
-                renderSiteContent();
-            }
-        });
+        const editPortfolioForm = document.getElementById('edit-portfolio-form');
+        if (editPortfolioForm) {
+            editPortfolioForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const adminPortfolioImg = document.getElementById('admin-portfolio-img');
+                const newPortImg = adminPortfolioImg ? adminPortfolioImg.value.trim() : '';
+                if (newPortImg) {
+                    const data = JSON.parse(JSON.stringify(getSiteData()));
+                    data.portfolioPhoto = newPortImg;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('portfolio-feedback', 'Capa do portfólio salva para todos!', 'bg-green-100 text-green-800');
+                }
+            });
+        }
 
-        document.getElementById('add-faq-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const question = document.getElementById('faqQuestion').value.trim();
-            const answer = document.getElementById('faqAnswer').value.trim();
-            
-            if (question && answer) {
-                const data = getSiteData();
-                if (!data.faqs) data.faqs = [];
-                data.faqs.push({ question: question, answer: answer });
-                saveSiteData(data);
-                this.reset();
-                showAdminFeedback('faq-feedback', 'Dúvida adicionada com sucesso!', 'bg-green-100 text-green-800');
-                renderSiteContent();
-            }
-        });
+        const editAboutForm = document.getElementById('edit-about-form');
+        if (editAboutForm) {
+            editAboutForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const adminAboutImg = document.getElementById('admin-about-img');
+                const adminAboutText = document.getElementById('admin-about-text');
+                const newPhoto = adminAboutImg ? adminAboutImg.value.trim() : '';
+                const newText = adminAboutText ? adminAboutText.value.trim() : '';
+                
+                if (newPhoto && newText) {
+                    const data = JSON.parse(JSON.stringify(getSiteData()));
+                    data.about.photoUrl = newPhoto;
+                    data.about.text = newText;
+                    saveSiteDataToCloud(data);
+                    showAdminFeedback('about-feedback', 'Perfil salvo para todos!', 'bg-green-100 text-green-800');
+                }
+            });
+        }
+
+        const addFaqForm = document.getElementById('add-faq-form');
+        if (addFaqForm) {
+            addFaqForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const faqQuestion = document.getElementById('faqQuestion');
+                const faqAnswer = document.getElementById('faqAnswer');
+                const question = faqQuestion ? faqQuestion.value.trim() : '';
+                const answer = faqAnswer ? faqAnswer.value.trim() : '';
+                
+                if (question && answer) {
+                    const data = JSON.parse(JSON.stringify(getSiteData()));
+                    if (!data.faqs) data.faqs = [];
+                    data.faqs.push({ question: question, answer: answer });
+                    saveSiteDataToCloud(data);
+                    addFaqForm.reset();
+                    showAdminFeedback('faq-feedback', 'Dúvida adicionada para todos!', 'bg-green-100 text-green-800');
+                }
+            });
+        }
 
         function showAdminFeedback(elementId, message, classes) {
             const fb = document.getElementById(elementId);
-            fb.textContent = message;
-            fb.className = `mt-4 p-3 rounded-lg text-sm font-medium text-center block ${classes}`;
-            setTimeout(() => { fb.classList.add('hidden'); }, 3000);
+            if (fb) {
+                fb.textContent = message;
+                fb.className = `mt-2 p-2 rounded-lg text-xs font-medium text-center block ${classes}`;
+                setTimeout(() => { fb.classList.add('hidden'); }, 3000);
+            }
         }
 
         function renderAdminFaqs() {
             const list = document.getElementById('admin-faqs-list');
+            if (!list) return;
             const data = getSiteData();
             const faqs = data.faqs || defaultSiteData.faqs;
             list.innerHTML = '';
@@ -724,12 +920,11 @@
             });
         }
 
-        function deleteFaq(index) {
-            const data = getSiteData();
+        window.deleteFaq = function(index) {
+            const data = JSON.parse(JSON.stringify(getSiteData()));
             if (!data.faqs) data.faqs = [...defaultSiteData.faqs];
             data.faqs.splice(index, 1);
-            saveSiteData(data);
-            renderSiteContent();
+            saveSiteDataToCloud(data);
         }
     </script>
 </body>
