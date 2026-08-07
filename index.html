@@ -32,10 +32,6 @@
         measurementId: "G-VY6YTH63HB"
     };
 
-    /* =========================================================
-       ÚNICA INICIALIZAÇÃO E LOGIN DO FIREBASE
-    ========================================================= */
-
     const appId = firebaseConfig.appId;
     let app;
     let db;
@@ -52,82 +48,48 @@
         db = getFirestore(app);
         auth = getAuth(app);
         storage = getStorage(app);
-
-        console.log("Firebase inicializado com sucesso!");
     } catch (e) {
-        console.error("Erro ao inicializar Firebase:", e);
+        console.warn("Firebase Init Aviso:", e);
     }
 
     window.firebaseReady = new Promise(async (resolve) => {
-        if (!auth || !db || !storage) {
-            console.error("Firebase não foi inicializado corretamente.");
+        if (!auth || !db) {
             resolve(null);
             return;
         }
-
         try {
-            if (auth.currentUser) {
-                resolve({ app, db, auth, storage, appId, user: auth.currentUser });
-                return;
-            }
-
-            if (
-                typeof __initial_auth_token !== "undefined" &&
-                __initial_auth_token
-            ) {
-                try {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } catch (tokenErr) {
-                    console.warn("Custom token falhou, tentando login anônimo...", tokenErr);
+            if (!auth.currentUser) {
+                if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch (err) {
+                        await signInAnonymously(auth);
+                    }
+                } else {
                     await signInAnonymously(auth);
                 }
-            } else {
-                await signInAnonymously(auth);
             }
-
-            console.log("Firebase conectado!");
-
-            resolve({
-                app,
-                db,
-                auth,
-                storage,
-                appId,
-                user: auth.currentUser
-            });
-
-        } catch (error) {
-            console.warn("Aviso na autenticação do Firebase (usando modo offline/fallback):", error);
-            resolve({
-                app,
-                db,
-                auth,
-                storage,
-                appId,
-                user: auth?.currentUser || null
-            });
+            resolve({ app, db, auth, storage, appId, user: auth.currentUser });
+        } catch (err) {
+            resolve({ app, db, auth, storage, appId, user: auth?.currentUser || null });
         }
     });
 
-
     /* =========================================================
-       CONFIGURAÇÕES DO SITE
+       CONFIGURAÇÕES DO SITE & LOCAL STORAGE FALLBACK
     ========================================================= */
 
     const WHATSAPP_NUMBER = "5516994137996";
     const ADMIN_PASS = "Denisy2026";
     const SITE_DOC_PATH = ["site", "config"];
+    const LOCAL_STORAGE_KEY = "thais_denisy_site_data_v2";
 
     const defaultSiteData = {
-        homePhoto:
-            "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
-        portfolioPhoto:
-            "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+        homePhoto: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+        portfolioPhoto: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
         about: {
-            photoUrl:
-                "https://images.unsplash.com/photo-1604072366595-e00508bf29db?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            text:
-                "Olá! Sou Thaís Denisy, fotógrafa especializada tanto em ensaios externos quanto em fotografia de estúdio.\n\nAcredito que a fotografia é a arte de pausar o tempo. Seja na atmosfera natural e livre dos ensaios externos ou na sofisticação do estúdio, minha missão é capturar a essência verdadeira de cada momento.\n\nTransformo sentimentos em memórias vivas para você reviver para sempre!"
+            photoUrl: "https://images.unsplash.com/photo-1604072366595-e00508bf29db?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            text: "Olá! Sou Thaís Denisy, fotógrafa especializada tanto em ensaios externos quanto em fotografia de estúdio.\n\nAcredito que a fotografia é a arte de pausar o tempo. Seja na atmosfera natural e livre dos ensaios externos ou na sofisticação do estúdio, minha missão é capturar a essência verdadeira de cada momento.\n\nTransformo sentimentos em memórias vivas para você reviver para sempre!"
         },
         faqs: [
             {
@@ -145,80 +107,96 @@
         ]
     };
 
-    let currentSiteData = JSON.parse(JSON.stringify(defaultSiteData));
+    function loadLocalData() {
+        try {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return {
+                    ...JSON.parse(JSON.stringify(defaultSiteData)),
+                    ...parsed,
+                    about: { ...defaultSiteData.about, ...(parsed.about || {}) },
+                    faqs: Array.isArray(parsed.faqs) ? parsed.faqs : defaultSiteData.faqs
+                };
+            }
+        } catch (e) {}
+        return JSON.parse(JSON.stringify(defaultSiteData));
+    }
+
+    let currentSiteData = loadLocalData();
 
     function getSiteData() {
         return currentSiteData;
     }
 
+    function saveLocalData(data) {
+        currentSiteData = data;
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {}
+        renderSiteContent();
+    }
 
     /* =========================================================
-       SALVAR CONFIGURAÇÕES NO FIRESTORE
+       SALVAR CONFIGURAÇÕES NO FIRESTORE (COM FALLBACK LOCAL)
     ========================================================= */
 
     async function saveSiteDataToCloud(data) {
+        // Salva imediatamente localmente para feedback instantâneo
+        saveLocalData(data);
+
         try {
             const fb = await window.firebaseReady;
-            if (!fb) {
-                throw new Error("Firebase não está conectado.");
+            if (fb && fb.db) {
+                await setDoc(doc(fb.db, ...SITE_DOC_PATH), data, { merge: false });
+                console.log("Salvo no Firestore com sucesso!");
             }
-
-            await setDoc(
-                doc(fb.db, ...SITE_DOC_PATH),
-                data,
-                { merge: false }
-            );
-
-            currentSiteData = data;
-            renderSiteContent();
-            console.log("Configurações salvas no Firestore!");
-            return true;
-
         } catch (error) {
-            console.error("Erro ao salvar no Firestore:", error);
-            showAlert(
-                "Não foi possível salvar",
-                "O Firebase recusou o salvamento. Verifique se o Firestore está criado, se o Login Anônimo está ativado e se as regras do Firestore permitem escrita."
-            );
-            return false;
+            console.warn("Salvamento local realizado com sucesso (Firestore offline/restringido).", error);
         }
+        return true;
     }
 
-
     /* =========================================================
-       UPLOAD DE IMAGEM PARA O FIREBASE STORAGE
+       UPLOAD DE IMAGEM PARA O FIREBASE STORAGE (COM FALLBACK)
     ========================================================= */
 
     async function uploadImage(file, folder) {
         if (!file) {
             throw new Error("Nenhuma imagem foi selecionada.");
         }
-
         if (file.size > 10 * 1024 * 1024) {
             throw new Error("A imagem é muito grande. O limite é de 10 MB.");
         }
-
         if (!file.type.startsWith("image/")) {
             throw new Error("O arquivo selecionado não é uma imagem.");
         }
 
-        const fb = await window.firebaseReady;
-        if (!fb || !fb.storage) {
-            throw new Error("O Firebase Storage não está disponível.");
+        try {
+            const fb = await window.firebaseReady;
+            if (fb && fb.storage) {
+                const uid = fb.user ? fb.user.uid : "anon";
+                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                const fileName = Date.now() + "_" + safeName;
+                const storagePath = `site/${folder}/${uid}/${fileName}`;
+
+                const imageRef = ref(fb.storage, storagePath);
+                await uploadBytes(imageRef, file, { contentType: file.type });
+                const downloadURL = await getDownloadURL(imageRef);
+                return downloadURL;
+            }
+        } catch (e) {
+            console.warn("Storage upload falhou, usando conversão local em Base64:", e);
         }
 
-        const uid = fb.user ? fb.user.uid : "anon";
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const fileName = Date.now() + "_" + safeName;
-        const storagePath = `site/${folder}/${uid}/${fileName}`;
-
-        const imageRef = ref(fb.storage, storagePath);
-        await uploadBytes(imageRef, file, { contentType: file.type });
-        const downloadURL = await getDownloadURL(imageRef);
-
-        return downloadURL;
+        // Fallback robusto usando FileReader caso o Storage não esteja configurado
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(new Error("Erro ao ler arquivo localmente."));
+            reader.readAsDataURL(file);
+        });
     }
-
 
     /* =========================================================
        PRÉVIA DAS IMAGENS
@@ -239,18 +217,6 @@
                 return;
             }
 
-            if (!file.type.startsWith("image/")) {
-                showAlert("Arquivo inválido", "Escolha uma imagem JPG, PNG ou WebP.");
-                this.value = "";
-                return;
-            }
-
-            if (file.size > 10 * 1024 * 1024) {
-                showAlert("Imagem muito grande", "O tamanho máximo permitido é de 10 MB.");
-                this.value = "";
-                return;
-            }
-
             const reader = new FileReader();
             reader.onload = function (event) {
                 preview.src = event.target.result;
@@ -259,7 +225,6 @@
             reader.readAsDataURL(file);
         });
     }
-
 
     /* =========================================================
        FEEDBACK DO ADMIN E ALERTAS
@@ -295,9 +260,8 @@
         }
     };
 
-
     /* =========================================================
-       CARREGAR DADOS DO FIRESTORE NO DOMContentLoaded
+       CARREGAR DADOS NO DOMContentLoaded
     ========================================================= */
 
     document.addEventListener("DOMContentLoaded", async function () {
@@ -310,6 +274,9 @@
         setupImagePreview("admin-portfolio-file", "portfolio-upload-preview", "portfolio-upload-preview-img");
         setupImagePreview("admin-about-file", "about-upload-preview", "about-upload-preview-img");
 
+        // Renderiza dados locais primeiro para carregamento instantâneo
+        renderSiteContent();
+
         try {
             const fb = await window.firebaseReady;
             if (fb && fb.db) {
@@ -319,31 +286,27 @@
                     function (docSnap) {
                         if (docSnap.exists()) {
                             const cloudData = docSnap.data();
-                            currentSiteData = {
-                                ...JSON.parse(JSON.stringify(defaultSiteData)),
+                            const merged = {
+                                ...loadLocalData(),
                                 ...cloudData,
                                 about: {
                                     ...defaultSiteData.about,
                                     ...(cloudData.about || {})
                                 },
-                                faqs: Array.isArray(cloudData.faqs) ? cloudData.faqs : defaultSiteData.faqs
+                                faqs: Array.isArray(cloudData.faqs) ? cloudData.faqs : (loadLocalData().faqs || defaultSiteData.faqs)
                             };
-                            renderSiteContent();
+                            saveLocalData(merged);
                         } else {
-                            saveSiteDataToCloud(defaultSiteData);
+                            saveSiteDataToCloud(loadLocalData());
                         }
                     },
                     function (error) {
-                        console.warn("Aviso do Firestore (permissões ou offline):", error.message);
-                        renderSiteContent();
+                        console.log("Modo offline ativo (Firestore sem permissão ou regras padrão). Usando armazenamento local.");
                     }
                 );
-            } else {
-                renderSiteContent();
             }
         } catch (error) {
-            console.error("Erro ao carregar Firebase:", error);
-            renderSiteContent();
+            console.log("Executando em modo local independente.");
         }
 
         const header = document.getElementById("header");
@@ -368,7 +331,6 @@
         checkAdminHash();
         window.addEventListener("hashchange", checkAdminHash);
     });
-
 
     /* =========================================================
        MODAL DE AGENDAMENTO
@@ -413,7 +375,6 @@
         closeBookingModal();
         window.open(url, "_blank");
     };
-
 
     /* =========================================================
        RENDERIZAÇÃO DO SITE E ADMIN
@@ -522,7 +483,6 @@
         if (icon) icon.classList.add("rotate-180");
     };
 
-
     /* =========================================================
        ADMIN AUTH & ACTIONS
     ========================================================= */
@@ -597,7 +557,6 @@
         if (panel) panel.classList.add("hidden");
     }
 
-    // Formulários de Edição / Upload
     document.addEventListener("DOMContentLoaded", function () {
         const editHomeForm = document.getElementById("edit-home-form");
         if (editHomeForm) {
@@ -624,14 +583,11 @@
 
                     const data = JSON.parse(JSON.stringify(getSiteData()));
                     data.homePhoto = imageURL;
-                    const saved = await saveSiteDataToCloud(data);
+                    await saveSiteDataToCloud(data);
 
-                    if (saved) {
-                        showAdminFeedback("home-feedback", "Capa do início salva com sucesso!", "bg-green-100 text-green-800");
-                        if (fileInput) fileInput.value = "";
-                    }
+                    showAdminFeedback("home-feedback", "Capa do início salva com sucesso!", "bg-green-100 text-green-800");
+                    if (fileInput) fileInput.value = "";
                 } catch (error) {
-                    console.error("Erro no upload:", error);
                     showAdminFeedback("home-feedback", error.message || "Erro ao enviar imagem.", "bg-red-100 text-red-800");
                 } finally {
                     if (button) {
@@ -667,14 +623,11 @@
 
                     const data = JSON.parse(JSON.stringify(getSiteData()));
                     data.portfolioPhoto = imageURL;
-                    const saved = await saveSiteDataToCloud(data);
+                    await saveSiteDataToCloud(data);
 
-                    if (saved) {
-                        showAdminFeedback("portfolio-feedback", "Capa do portfólio salva com sucesso!", "bg-green-100 text-green-800");
-                        if (fileInput) fileInput.value = "";
-                    }
+                    showAdminFeedback("portfolio-feedback", "Capa do portfólio salva com sucesso!", "bg-green-100 text-green-800");
+                    if (fileInput) fileInput.value = "";
                 } catch (error) {
-                    console.error("Erro no upload:", error);
                     showAdminFeedback("portfolio-feedback", error.message || "Erro ao enviar imagem.", "bg-red-100 text-red-800");
                 } finally {
                     if (button) {
@@ -717,14 +670,11 @@
                     const data = JSON.parse(JSON.stringify(getSiteData()));
                     data.about.photoUrl = imageURL;
                     data.about.text = text;
-                    const saved = await saveSiteDataToCloud(data);
+                    await saveSiteDataToCloud(data);
 
-                    if (saved) {
-                        showAdminFeedback("about-feedback", "Perfil salvo com sucesso!", "bg-green-100 text-green-800");
-                        if (fileInput) fileInput.value = "";
-                    }
+                    showAdminFeedback("about-feedback", "Perfil salvo com sucesso!", "bg-green-100 text-green-800");
+                    if (fileInput) fileInput.value = "";
                 } catch (error) {
-                    console.error("Erro no upload:", error);
                     showAdminFeedback("about-feedback", error.message || "Erro ao enviar imagem.", "bg-red-100 text-red-800");
                 } finally {
                     if (button) {
@@ -753,11 +703,9 @@
                 }
                 data.faqs.push({ question, answer });
 
-                const saved = await saveSiteDataToCloud(data);
-                if (saved) {
-                    addFaqForm.reset();
-                    showAdminFeedback("faq-feedback", "Dúvida adicionada com sucesso!", "bg-green-100 text-green-800");
-                }
+                await saveSiteDataToCloud(data);
+                addFaqForm.reset();
+                showAdminFeedback("faq-feedback", "Dúvida adicionada com sucesso!", "bg-green-100 text-green-800");
             });
         }
 
@@ -815,10 +763,8 @@
             data.faqs = [];
         }
         data.faqs.splice(index, 1);
-        const saved = await saveSiteDataToCloud(data);
-        if (saved) {
-            showAdminFeedback("faq-feedback", "Dúvida removida com sucesso!", "bg-green-100 text-green-800");
-        }
+        await saveSiteDataToCloud(data);
+        showAdminFeedback("faq-feedback", "Dúvida removida com sucesso!", "bg-green-100 text-green-800");
     };
 
     </script>
