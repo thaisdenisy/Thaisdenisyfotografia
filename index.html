@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#161311" />
+  <meta name="description" content="Thais Denisy Fotografia — ensaios de gestante, família, casal, infantil, debutante, corporativo e eventos." />
+  <title>Thais Denisy Fotografia</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
+  <link rel="icon" href="assets/logo-td.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-loader" id="pageLoader" aria-hidden="true">
+    <div class="loader-mark">TD</div>
+  </div>
+
+  <header class="site-header" id="inicio">
+    <div class="container header-inner">
+      <a class="brand" href="#inicio" aria-label="Ir para o início">
+        <span class="brand-monogram">TD</span>
+        <span class="brand-copy">
+          <strong data-bind="brandName">THAIS DENISY</strong>
+          <small>fotografia</small>
+        </span>
+      </a>
+
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span>
+      </button>
+
+      <nav class="main-nav" id="mainNav" aria-label="Navegação principal">
+        <a href="#portfolio">Portfólio</a>
+        <a href="#experiencias">Experiências</a>
+        <a href="#sobre">Sobre</a>
+        <a class="nav-cta" href="#agendar">Agendar</a>
+        <button class="nav-link-button" data-open="sessionsModal">Minhas sessões</button>
+        <button class="nav-admin" data-open="adminModal">Administrador</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero section-shell">
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <span class="eyebrow">Fotografia afetiva • Matão e região</span>
+          <h1>O instante passa.<br><em>A memória fica.</em></h1>
+          <p class="hero-subtitle" data-bind="heroText">Fotografias que transformam sentimentos, encontros e fases da vida em lembranças para sempre.</p>
+
+          <div class="hero-actions">
+            <a class="button button-dark" href="#agendar">Agendar meu ensaio</a>
+            <a class="button button-light" href="#portfolio">Ver portfólio</a>
+          </div>
+
+          <div class="hero-details">
+            <span>Atendimento personalizado</span>
+            <span>Direção durante o ensaio</span>
+            <span>Experiência leve e acolhedora</span>
+          </div>
+        </div>
+
+        <div class="hero-visual reveal" aria-label="Galeria de fotografias">
+          <figure class="hero-photo hero-photo-main">
+            <img id="heroMainImage" src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=88" alt="Casal em ensaio fotográfico ao pôr do sol" />
+          </figure>
+          <figure class="hero-photo hero-photo-small">
+            <img id="heroSmallImage" src="https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=700&q=88" alt="Família sorrindo em ensaio fotográfico" />
+          </figure>
+          <div class="hero-signature">
+            <span>Momentos eternos,</span>
+            <strong>memórias vivas.</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="marquee" aria-label="Tipos de ensaio">
+      <div class="marquee-track">
+        <span>Gestante</span><i>✦</i><span>Família</span><i>✦</i><span>Casal</span><i>✦</i><span>Infantil</span><i>✦</i><span>Debutante</span><i>✦</i><span>Corporativo</span><i>✦</i><span>Eventos</span><i>✦</i>
+        <span>Gestante</span><i>✦</i><span>Família</span><i>✦</i><span>Casal</span><i>✦</i><span>Infantil</span><i>✦</i><span>Debutante</span><i>✦</i><span>Corporativo</span><i>✦</i><span>Eventos</span><i>✦</i>
+      </div>
+    </section>
+
+    <section class="section" id="portfolio">
+      <div class="container">
+        <div class="section-heading reveal">
+          <div>
+            <span class="eyebrow">Histórias em imagens</span>
+            <h2>Portfólio</h2>
+          </div>
+          <p>Uma seleção de momentos reais, fotografados com delicadeza, direção e intenção.</p>
+        </div>
+
+        <div class="portfolio-grid" id="portfolioGrid"></div>
+      </div>
+    </section>
+
+    <section class="section section-soft" id="experiencias">
+      <div class="container">
+        <div class="section-heading centered reveal">
+          <span class="eyebrow">Escolha como quer lembrar</span>
+          <h2>Experiências fotográficas</h2>
+          <p>Cada sessão é planejada para combinar com a sua história, seu momento e sua personalidade.</p>
+        </div>
+
+        <div class="services-grid" id="servicesGrid"></div>
+        <div class="section-cta reveal">
+          <a class="button button-dark" href="#agendar">Montar meu agendamento</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section about-section" id="sobre">
+      <div class="container about-grid">
+        <div class="about-photo reveal">
+          <img id="aboutImage" src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1100&q=85" alt="Fotógrafa trabalhando em um ambiente profissional" />
+          <span class="about-badge">Desde os 9 anos<br>sonhando com fotografia</span>
+        </div>
+
+        <div class="about-copy reveal">
+          <span class="eyebrow">Prazer, sou a Thais</span>
+          <h2>Eu não fotografo apenas como você está. Fotografo como este momento faz você se sentir.</h2>
+          <p data-bind="aboutText">Sou Thais Denisy, fotógrafa e registradora de momentos. Meu propósito é transformar fases especiais da sua vida em imagens vivas, delicadas e cheias de significado.</p>
+          <p>Você não precisa saber posar. Durante todo o ensaio, eu conduzo cada detalhe para que a experiência seja natural, leve e verdadeiramente sua.</p>
+          <div class="about-stats">
+            <div><strong>7+</strong><span>tipos de experiência</span></div>
+            <div><strong>100%</strong><span>atendimento próximo</span></div>
+            <div><strong>∞</strong><span>memórias preservadas</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section testimonials-section">
+      <div class="container">
+        <div class="section-heading centered reveal">
+          <span class="eyebrow">O que fica depois do ensaio</span>
+          <h2>Palavras de quem viveu</h2>
+        </div>
+        <div class="testimonials-grid">
+          <article class="testimonial reveal">
+            <div class="stars">★★★★★</div>
+            <p>“A Thais deixou tudo tão leve que parecia um encontro em família. As fotos ficaram exatamente como eu sonhava.”</p>
+            <strong>Ensaio de família</strong>
+          </article>
+          <article class="testimonial reveal">
+            <div class="stars">★★★★★</div>
+            <p>“Eu estava insegura, mas ela dirigiu cada pose com muito carinho. Me senti linda e totalmente à vontade.”</p>
+            <strong>Ensaio gestante</strong>
+          </article>
+          <article class="testimonial reveal">
+            <div class="stars">★★★★★</div>
+            <p>“Além das fotos lindas, a experiência inteira foi especial. Foi um presente que vamos guardar para sempre.”</p>
+            <strong>Ensaio de casal</strong>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section booking-section" id="agendar">
+      <div class="container">
+        <div class="section-heading centered reveal">
+          <span class="eyebrow">Seu momento começa aqui</span>
+          <h2>Agende sua sessão</h2>
+          <p>Escolha a experiência, a melhor data e envie seu pedido diretamente para confirmação no WhatsApp.</p>
+        </div>
+
+        <div class="booking-card reveal">
+          <div class="booking-progress" aria-label="Progresso do agendamento">
+            <button class="progress-step active" data-step-target="1"><span>1</span><small>Experiência</small></button>
+            <div></div>
+            <button class="progress-step" data-step-target="2"><span>2</span><small>Data e horário</small></button>
+            <div></div>
+            <button class="progress-step" data-step-target="3"><span>3</span><small>Seus dados</small></button>
+          </div>
+
+          <form id="bookingForm" novalidate>
+            <section class="booking-step active" data-step="1">
+              <div class="booking-title-row">
+                <div><span>Etapa 1</span><h3>Qual história vamos fotografar?</h3></div>
+                <small>Você pode selecionar mais de uma opção.</small>
+              </div>
+              <div class="booking-services" id="bookingServices"></div>
+              <div class="form-actions align-end">
+                <button class="button button-dark" type="button" data-next>Continuar</button>
+              </div>
+            </section>
+
+            <section class="booking-step" data-step="2">
+              <div class="booking-title-row">
+                <div><span>Etapa 2</span><h3>Escolha uma data e um horário</h3></div>
+                <small>A confirmação final será feita pelo WhatsApp.</small>
+              </div>
+              <div class="form-grid two-columns">
+                <label class="field">
+                  <span>Data desejada *</span>
+                  <input type="date" id="bookingDate" required />
+                </label>
+                <label class="field">
+                  <span>Horário desejado *</span>
+                  <select id="bookingTime" required>
+                    <option value="">Selecione</option>
+                    <option>08:00</option><option>09:00</option><option>10:00</option>
+                    <option>14:00</option><option>15:00</option><option>16:00</option>
+                    <option>17:00</option><option>18:00</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field">
+                <span>Local ou cidade desejada</span>
+                <input type="text" id="bookingLocation" placeholder="Ex.: Estúdio, Matão, Dobrada..." />
+              </label>
+              <div class="form-actions">
+                <button class="button button-light" type="button" data-prev>Voltar</button>
+                <button class="button button-dark" type="button" data-next>Continuar</button>
+              </div>
+            </section>
+
+            <section class="booking-step" data-step="3">
+              <div class="booking-title-row">
+                <div><span>Etapa 3</span><h3>Conte um pouquinho sobre você</h3></div>
+                <small>Usaremos os dados apenas para falar sobre seu ensaio.</small>
+              </div>
+              <div class="form-grid two-columns">
+                <label class="field">
+                  <span>Nome completo *</span>
+                  <input type="text" id="clientName" autocomplete="name" required />
+                </label>
+                <label class="field">
+                  <span>Seu WhatsApp *</span>
+                  <input type="tel" id="clientPhone" inputmode="tel" placeholder="(16) 99999-9999" required />
+                </label>
+              </div>
+              <label class="field">
+                <span>Como você imagina esse ensaio?</span>
+                <textarea id="bookingMessage" rows="4" placeholder="Conte o estilo, ocasião, número de pessoas ou qualquer detalhe importante."></textarea>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" id="privacyConsent" required />
+                <span>Concordo em enviar essas informações pelo WhatsApp para solicitar a confirmação.</span>
+              </label>
+              <div class="booking-summary" id="bookingSummary"></div>
+              <div class="form-actions">
+                <button class="button button-light" type="button" data-prev>Voltar</button>
+                <button class="button button-dark" type="submit">Enviar para o WhatsApp</button>
+              </div>
+            </section>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="section faq-section">
+      <div class="container narrow">
+        <div class="section-heading centered reveal">
+          <span class="eyebrow">Antes do nosso encontro</span>
+          <h2>Perguntas frequentes</h2>
+        </div>
+        <div class="faq-list" id="faqList"></div>
+      </div>
+    </section>
+
+    <section class="instagram-section">
+      <div class="container instagram-card reveal">
+        <div>
+          <span class="eyebrow">Acompanhe os bastidores</span>
+          <h2>Mais histórias no Instagram</h2>
+          <p>Veja ensaios, novidades, inspirações e um pouco de tudo que acontece por trás das câmeras.</p>
+        </div>
+        <a class="button button-light" id="instagramButton" href="https://instagram.com/" target="_blank" rel="noopener">Abrir Instagram</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <a class="brand brand-footer" href="#inicio">
+          <span class="brand-monogram">TD</span>
+          <span class="brand-copy"><strong data-bind="brandName">THAIS DENISY</strong><small>fotografia</small></span>
+        </a>
+        <p data-bind="slogan">Momentos eternos, memórias vivas.</p>
+      </div>
+      <div>
+        <h3>Navegação</h3>
+        <a href="#portfolio">Portfólio</a>
+        <a href="#experiencias">Experiências</a>
+        <a href="#sobre">Sobre</a>
+        <a href="#agendar">Agendar</a>
+      </div>
+      <div>
+        <h3>Atendimento</h3>
+        <p>Matão e região</p>
+        <a id="footerWhatsapp" href="https://wa.me/5516994137996" target="_blank" rel="noopener">WhatsApp: (16) 99413-7996</a>
+        <p>Horários sob agendamento</p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span id="currentYear"></span> Thais Denisy Fotografia.</span>
+      <span>Feito para guardar o que importa.</span>
+    </div>
+  </footer>
+
+  <button class="floating-whatsapp" id="floatingWhatsapp" aria-label="Conversar pelo WhatsApp">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.52 3.48A11.83 11.83 0 0 0 12.09 0C5.55 0 .23 5.32.23 11.86c0 2.09.55 4.13 1.6 5.92L.13 24l6.37-1.67a11.83 11.83 0 0 0 5.58 1.42h.01c6.54 0 11.86-5.32 11.86-11.86 0-3.17-1.22-6.15-3.43-8.41ZM12.09 21.74h-.01a9.84 9.84 0 0 1-5.02-1.38l-.36-.21-3.78.99 1.01-3.68-.23-.38a9.82 9.82 0 1 1 8.39 4.66Zm5.39-7.37c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.34.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.04-.17-.3-.02-.46.13-.61.13-.13.3-.34.44-.52.15-.17.2-.3.3-.49.1-.2.05-.37-.02-.52-.08-.15-.66-1.6-.91-2.19-.24-.58-.49-.5-.66-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.46s1.06 2.86 1.21 3.06c.15.2 2.08 3.18 5.04 4.46.7.3 1.25.48 1.68.62.71.22 1.35.19 1.86.12.57-.08 1.75-.72 2-1.41.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35Z"/></svg>
+  </button>
+
+  <div class="modal" id="sessionsModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-dialog modal-wide" role="dialog" aria-modal="true" aria-labelledby="sessionsTitle">
+      <button class="modal-close" data-close aria-label="Fechar">×</button>
+      <span class="eyebrow">Acompanhamento</span>
+      <h2 id="sessionsTitle">Minhas solicitações</h2>
+      <p class="modal-intro">As solicitações feitas neste aparelho aparecem aqui. A confirmação oficial acontece pelo WhatsApp.</p>
+      <div id="sessionsList" class="sessions-list"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="adminModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-dialog modal-admin" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+      <button class="modal-close" data-close aria-label="Fechar">×</button>
+
+      <div id="adminLogin">
+        <span class="eyebrow">Área reservada</span>
+        <h2 id="adminTitle">Administrador</h2>
+        <p class="modal-intro">Entre para editar textos, serviços, imagens do portfólio e dados de contato.</p>
+        <label class="field">
+          <span>Senha</span>
+          <input type="password" id="adminPassword" autocomplete="current-password" />
+        </label>
+        <p class="form-error" id="adminError"></p>
+        <button class="button button-dark full-width" id="adminLoginButton" type="button">Entrar</button>
+      </div>
+
+      <div id="adminPanel" hidden>
+        <div class="admin-header">
+          <div><span class="eyebrow">Painel de edição</span><h2>Personalizar site</h2></div>
+          <button class="text-button" id="adminLogout" type="button">Sair</button>
+        </div>
+
+        <div class="admin-tabs" role="tablist">
+          <button class="active" data-admin-tab="general" type="button">Geral</button>
+          <button data-admin-tab="services" type="button">Serviços</button>
+          <button data-admin-tab="portfolio" type="button">Portfólio</button>
+          <button data-admin-tab="faq" type="button">FAQ</button>
+          <button data-admin-tab="backup" type="button">Backup</button>
+        </div>
+
+        <section class="admin-tab active" data-admin-panel="general">
+          <div class="form-grid two-columns">
+            <label class="field"><span>Nome da marca</span><input id="adminBrandName" /></label>
+            <label class="field"><span>Slogan</span><input id="adminSlogan" /></label>
+          </div>
+          <label class="field"><span>Texto principal</span><textarea id="adminHeroText" rows="3"></textarea></label>
+          <label class="field"><span>Texto “Sobre”</span><textarea id="adminAboutText" rows="4"></textarea></label>
+          <div class="form-grid two-columns">
+            <label class="field"><span>WhatsApp (somente números)</span><input id="adminWhatsapp" inputmode="numeric" /></label>
+            <label class="field"><span>Link do Instagram</span><input id="adminInstagram" type="url" /></label>
+          </div>
+          <div class="form-grid two-columns">
+            <label class="field"><span>Foto principal (URL)</span><input id="adminHeroMainImage" type="url" /></label>
+            <label class="field"><span>Foto secundária (URL)</span><input id="adminHeroSmallImage" type="url" /></label>
+          </div>
+          <label class="field"><span>Foto “Sobre” (URL)</span><input id="adminAboutImage" type="url" /></label>
+          <button class="button button-dark" id="saveGeneral" type="button">Salvar alterações</button>
+        </section>
+
+        <section class="admin-tab" data-admin-panel="services">
+          <div id="adminServicesList" class="admin-list"></div>
+          <div class="admin-add-box">
+            <h3>Adicionar experiência</h3>
+            <div class="form-grid two-columns">
+              <label class="field"><span>Nome</span><input id="newServiceName" /></label>
+              <label class="field"><span>Duração</span><input id="newServiceDuration" placeholder="Ex.: 1h30" /></label>
+            </div>
+            <label class="field"><span>Descrição</span><input id="newServiceDescription" /></label>
+            <label class="field"><span>Ícone ou número</span><input id="newServiceIcon" maxlength="3" placeholder="Ex.: 01 ou ✦" /></label>
+            <button class="button button-dark" id="addService" type="button">Adicionar serviço</button>
+          </div>
+        </section>
+
+        <section class="admin-tab" data-admin-panel="portfolio">
+          <div id="adminPortfolioList" class="admin-list admin-portfolio-list"></div>
+          <div class="admin-add-box">
+            <h3>Adicionar fotografia</h3>
+            <label class="field"><span>URL da imagem</span><input id="newPortfolioUrl" type="url" /></label>
+            <div class="form-grid two-columns">
+              <label class="field"><span>Título</span><input id="newPortfolioTitle" /></label>
+              <label class="field"><span>Formato</span><select id="newPortfolioSize"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option><option value="square">Quadrado</option></select></label>
+            </div>
+            <button class="button button-dark" id="addPortfolio" type="button">Adicionar imagem</button>
+          </div>
+        </section>
+
+        <section class="admin-tab" data-admin-panel="faq">
+          <div id="adminFaqList" class="admin-list"></div>
+          <div class="admin-add-box">
+            <h3>Adicionar pergunta</h3>
+            <label class="field"><span>Pergunta</span><input id="newFaqQuestion" /></label>
+            <label class="field"><span>Resposta</span><textarea id="newFaqAnswer" rows="3"></textarea></label>
+            <button class="button button-dark" id="addFaq" type="button">Adicionar pergunta</button>
+          </div>
+        </section>
+
+        <section class="admin-tab" data-admin-panel="backup">
+          <div class="backup-box">
+            <h3>Exportar conteúdo</h3>
+            <p>Baixe uma cópia de textos, serviços e imagens para guardar ou levar para outro navegador.</p>
+            <button class="button button-light" id="exportContent" type="button">Baixar backup JSON</button>
+          </div>
+          <div class="backup-box">
+            <h3>Importar conteúdo</h3>
+            <p>Selecione um arquivo JSON exportado por este painel.</p>
+            <input type="file" id="importContent" accept="application/json" />
+          </div>
+          <div class="backup-box danger-box">
+            <h3>Restaurar padrão</h3>
+            <p>Apaga as personalizações salvas neste navegador.</p>
+            <button class="button button-danger" id="resetContent" type="button">Restaurar site</button>
+          </div>
+          <p class="admin-note">Este painel usa armazenamento local. Para que as alterações apareçam para todos os visitantes e em qualquer aparelho, conecte o site a um banco de dados como Firebase.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
