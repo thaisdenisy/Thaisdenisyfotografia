@@ -11,51 +11,2315 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDK Imports -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBKGEJX8JgeRV4D023PgUWZr-qU3cNzpFI",
-            authDomain: "thaisdenisyfotografa-bdb29.firebaseapp.com",
-            projectId: "thaisdenisyfotografa-bdb29",
-            storageBucket: "thaisdenisyfotografa-bdb29.firebasestorage.app",
-            messagingSenderId: "387495783003",
-            appId: "1:387495783003:web:cba53abb189132bc07ed7e",
-            measurementId: "G-VY6YTH63HB"
-        };
+    /* =========================================================
+       FIREBASE
+    ========================================================= */
 
-        const appId = firebaseConfig.appId;
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
-        let app, db, auth, storage;
+    import {
+        getAuth,
+        signInAnonymously
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+    import {
+        getFirestore,
+        doc,
+        setDoc,
+        onSnapshot
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    import {
+        getStorage,
+        ref,
+        uploadBytes,
+        getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+
+    /* =========================================================
+       CONFIGURAÇÃO DO FIREBASE
+    ========================================================= */
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBKGEJX8JgeRV4D023PgUWZr-qU3cNzpFI",
+        authDomain: "thaisdenisyfotografa-bdb29.firebaseapp.com",
+        projectId: "thaisdenisyfotografa-bdb29",
+        storageBucket: "thaisdenisyfotografa-bdb29.firebasestorage.app",
+        messagingSenderId: "387495783003",
+        appId: "1:387495783003:web:cba53abb189132bc07ed7e",
+        measurementId: "G-VY6YTH63HB"
+    };
+
+
+    /* =========================================================
+       INICIALIZAÇÃO
+    ========================================================= */
+
+    const app = initializeApp(firebaseConfig);
+
+    const auth = getAuth(app);
+
+    const db = getFirestore(app);
+
+    const storage = getStorage(app);
+
+    const appId = firebaseConfig.appId;
+
+    let currentUser = null;
+
+
+    /* =========================================================
+       LOGIN ANÔNIMO
+    ========================================================= */
+
+    window.firebaseReady = new Promise(async (resolve) => {
+
         try {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            storage = getStorage(app);
-        } catch(e) {
-            console.error("Firebase init error:", e);
+
+            const result = await signInAnonymously(auth);
+
+            currentUser = result.user;
+
+            console.log("Firebase conectado com sucesso!");
+            console.log("Usuário anônimo:", currentUser.uid);
+
+            resolve({
+                app,
+                auth,
+                db,
+                storage,
+                appId,
+                user: currentUser
+            });
+
+        } catch (error) {
+
+            console.error("Erro no login anônimo do Firebase:", error);
+
+            showAlert(
+                "Erro no Firebase",
+                "Não foi possível conectar ao Firebase. Verifique se o Login Anônimo está ativado no Firebase Authentication."
+            );
+
+            resolve(null);
         }
 
-        window.firebaseReady = new Promise(async (resolve) => {
-            if (!auth) { resolve(null); return; }
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                resolve({ db, auth, storage, appId });
-            } catch (err) {
-                console.error("Auth error:", err);
-                resolve(null);
-            }
-        });
-    </script>
+    });
 
+
+    /* =========================================================
+       CONFIGURAÇÕES DO SITE
+    ========================================================= */
+
+    const WHATSAPP_NUMBER = "5516994137996";
+
+    const ADMIN_PASS = "Denisy2026";
+
+    const SITE_DOC_PATH = ["site", "config"];
+
+
+    const defaultSiteData = {
+
+        homePhoto:
+            "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+
+        portfolioPhoto:
+            "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+
+        about: {
+
+            photoUrl:
+                "https://images.unsplash.com/photo-1604072366595-e00508bf29db?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+
+            text:
+                "Olá! Sou Thaís Denisy, fotógrafa especializada tanto em ensaios externos quanto em fotografia de estúdio.\n\nAcredito que a fotografia é a arte de pausar o tempo. Seja na atmosfera natural e livre dos ensaios externos ou na sofisticação do estúdio, minha missão é capturar a essência verdadeira de cada momento.\n\nTransformo sentimentos em memórias vivas para você reviver para sempre!"
+        },
+
+        faqs: [
+
+            {
+                question:
+                    "Com quanto tempo de antecedência devo agendar?",
+
+                answer:
+                    "Para ensaios, o ideal é agendar com 1 a 2 meses de antecedência. Para casamentos e eventos maiores, recomendo pelo menos 6 a 12 meses para garantir a disponibilidade da data."
+            },
+
+            {
+                question:
+                    "Você faz fotos em estúdio e externas?",
+
+                answer:
+                    "Sim! Trabalho tanto com ensaios externos (locações escolhidas a dedo ou ao ar livre) quanto com fotografia em estúdio, oferecendo produções elegantes e sofisticadas para todos os estilos."
+            },
+
+            {
+                question:
+                    "Como funciona a entrega das fotos?",
+
+                answer:
+                    "As fotos são entregues em alta resolução por meio de uma galeria online privativa, onde você pode visualizar e baixar tudo de forma rápida e segura."
+            }
+
+        ]
+    };
+
+
+    let currentSiteData =
+        JSON.parse(JSON.stringify(defaultSiteData));
+
+
+    function getSiteData() {
+
+        return currentSiteData;
+
+    }
+
+
+    /* =========================================================
+       SALVAR CONFIGURAÇÕES NO FIRESTORE
+    ========================================================= */
+
+    async function saveSiteDataToCloud(data) {
+
+        try {
+
+            const fb = await window.firebaseReady;
+
+            if (!fb) {
+
+                throw new Error(
+                    "Firebase não está conectado."
+                );
+
+            }
+
+            await setDoc(
+                doc(fb.db, ...SITE_DOC_PATH),
+                data,
+                { merge: false }
+            );
+
+            currentSiteData = data;
+
+            renderSiteContent();
+
+            console.log(
+                "Configurações salvas no Firestore!"
+            );
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                "Erro ao salvar no Firestore:",
+                error
+            );
+
+            showAlert(
+                "Não foi possível salvar",
+                "O Firebase recusou o salvamento. Verifique se o Firestore está criado, se o Login Anônimo está ativado e se as regras do Firestore permitem escrita."
+            );
+
+            return false;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       UPLOAD DE IMAGEM PARA O FIREBASE STORAGE
+    ========================================================= */
+
+    async function uploadImage(file, folder) {
+
+        if (!file) {
+
+            throw new Error(
+                "Nenhuma imagem foi selecionada."
+            );
+
+        }
+
+
+        /* Limite de 10 MB */
+
+        if (file.size > 10 * 1024 * 1024) {
+
+            throw new Error(
+                "A imagem é muito grande. O limite é de 10 MB."
+            );
+
+        }
+
+
+        if (!file.type.startsWith("image/")) {
+
+            throw new Error(
+                "O arquivo selecionado não é uma imagem."
+            );
+
+        }
+
+
+        const fb = await window.firebaseReady;
+
+
+        if (!fb || !fb.user) {
+
+            throw new Error(
+                "O Firebase ainda não está conectado."
+            );
+
+        }
+
+
+        /*
+         * Nome único para evitar substituir
+         * arquivos anteriores.
+         */
+
+        const safeName =
+            file.name
+                .replace(/[^a-zA-Z0-9._-]/g, "_");
+
+
+        const fileName =
+            Date.now() + "_" + safeName;
+
+
+        /*
+         * Caminho no Firebase Storage
+         */
+
+        const storagePath =
+            `site/${folder}/${fb.user.uid}/${fileName}`;
+
+
+        console.log(
+            "Enviando imagem para:",
+            storagePath
+        );
+
+
+        const imageRef =
+            ref(fb.storage, storagePath);
+
+
+        /*
+         * Envia o arquivo
+         */
+
+        await uploadBytes(
+            imageRef,
+            file,
+            {
+                contentType: file.type
+            }
+        );
+
+
+        /*
+         * Obtém URL pública/download
+         */
+
+        const downloadURL =
+            await getDownloadURL(imageRef);
+
+
+        console.log(
+            "Imagem enviada com sucesso:",
+            downloadURL
+        );
+
+
+        return downloadURL;
+
+    }
+
+
+    /* =========================================================
+       PRÉVIA DAS IMAGENS
+    ========================================================= */
+
+    function setupImagePreview(
+        inputId,
+        previewContainerId,
+        previewImageId
+    ) {
+
+        const input =
+            document.getElementById(inputId);
+
+        const container =
+            document.getElementById(
+                previewContainerId
+            );
+
+        const preview =
+            document.getElementById(
+                previewImageId
+            );
+
+
+        if (!input || !container || !preview) {
+            return;
+        }
+
+
+        input.addEventListener(
+            "change",
+            function () {
+
+                const file =
+                    this.files &&
+                    this.files[0];
+
+
+                if (!file) {
+
+                    container.classList.add(
+                        "hidden"
+                    );
+
+                    preview.src = "";
+
+                    return;
+                }
+
+
+                if (!file.type.startsWith("image/")) {
+
+                    showAlert(
+                        "Arquivo inválido",
+                        "Escolha uma imagem JPG, PNG ou WebP."
+                    );
+
+                    this.value = "";
+
+                    return;
+                }
+
+
+                if (
+                    file.size >
+                    10 * 1024 * 1024
+                ) {
+
+                    showAlert(
+                        "Imagem muito grande",
+                        "O tamanho máximo permitido é de 10 MB."
+                    );
+
+                    this.value = "";
+
+                    return;
+                }
+
+
+                const reader =
+                    new FileReader();
+
+
+                reader.onload = function (event) {
+
+                    preview.src =
+                        event.target.result;
+
+                    container.classList.remove(
+                        "hidden"
+                    );
+
+                };
+
+
+                reader.readAsDataURL(file);
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       FEEDBACK DO ADMIN
+    ========================================================= */
+
+    function showAdminFeedback(
+        elementId,
+        message,
+        classes
+    ) {
+
+        const element =
+            document.getElementById(elementId);
+
+
+        if (!element) return;
+
+
+        element.textContent = message;
+
+
+        element.className =
+            `mt-2 p-2 rounded-lg text-xs font-medium text-center block ${classes}`;
+
+
+        setTimeout(() => {
+
+            element.classList.add(
+                "hidden"
+            );
+
+        }, 4000);
+
+    }
+
+
+    /* =========================================================
+       ALERTA
+    ========================================================= */
+
+    window.showAlert =
+        function (title, message) {
+
+            const alertEl =
+                document.getElementById(
+                    "custom-alert"
+                );
+
+            const alertTitle =
+                document.getElementById(
+                    "alert-title"
+                );
+
+            const alertMessage =
+                document.getElementById(
+                    "alert-message"
+                );
+
+
+            if (
+                alertEl &&
+                alertTitle &&
+                alertMessage
+            ) {
+
+                alertTitle.textContent =
+                    title;
+
+                alertMessage.textContent =
+                    message;
+
+                alertEl.classList.remove(
+                    "hidden"
+                );
+
+                alertEl.classList.add(
+                    "flex"
+                );
+
+            }
+
+        };
+
+
+    window.closeAlert =
+        function () {
+
+            const alertEl =
+                document.getElementById(
+                    "custom-alert"
+                );
+
+
+            if (alertEl) {
+
+                alertEl.classList.add(
+                    "hidden"
+                );
+
+                alertEl.classList.remove(
+                    "flex"
+                );
+
+            }
+
+        };
+
+
+    /* =========================================================
+       CARREGAR DADOS DO FIRESTORE
+    ========================================================= */
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        async function () {
+
+            const yearEl =
+                document.getElementById(
+                    "year"
+                );
+
+
+            if (yearEl) {
+
+                yearEl.textContent =
+                    new Date().getFullYear();
+
+            }
+
+
+            /*
+             * Pré-visualizações
+             */
+
+            setupImagePreview(
+                "admin-home-file",
+                "home-upload-preview",
+                "home-upload-preview-img"
+            );
+
+            setupImagePreview(
+                "admin-portfolio-file",
+                "portfolio-upload-preview",
+                "portfolio-upload-preview-img"
+            );
+
+            setupImagePreview(
+                "admin-about-file",
+                "about-upload-preview",
+                "about-upload-preview-img"
+            );
+
+
+            /*
+             * Firebase
+             */
+
+            try {
+
+                const fb =
+                    await window.firebaseReady;
+
+
+                if (fb) {
+
+                    const docRef =
+                        doc(
+                            fb.db,
+                            ...SITE_DOC_PATH
+                        );
+
+
+                    onSnapshot(
+                        docRef,
+                        function (docSnap) {
+
+                            if (
+                                docSnap.exists()
+                            ) {
+
+                                const cloudData =
+                                    docSnap.data();
+
+
+                                currentSiteData = {
+
+                                    ...JSON.parse(
+                                        JSON.stringify(
+                                            defaultSiteData
+                                        )
+                                    ),
+
+                                    ...cloudData,
+
+                                    about: {
+
+                                        ...defaultSiteData.about,
+
+                                        ...(cloudData.about || {})
+
+                                    },
+
+                                    faqs:
+                                        Array.isArray(
+                                            cloudData.faqs
+                                        )
+                                            ? cloudData.faqs
+                                            : defaultSiteData.faqs
+
+                                };
+
+
+                                renderSiteContent();
+
+                            } else {
+
+                                /*
+                                 * Cria o documento inicial
+                                 */
+
+                                saveSiteDataToCloud(
+                                    defaultSiteData
+                                );
+
+                            }
+
+                        },
+
+                        function (error) {
+
+                            console.error(
+                                "Erro no Firestore:",
+                                error
+                            );
+
+                            renderSiteContent();
+
+                        }
+                    );
+
+                } else {
+
+                    renderSiteContent();
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Erro ao carregar Firebase:",
+                    error
+                );
+
+                renderSiteContent();
+
+            }
+
+
+            /* Header */
+
+            const header =
+                document.getElementById(
+                    "header"
+                );
+
+
+            if (header) {
+
+                window.addEventListener(
+                    "scroll",
+                    function () {
+
+                        if (
+                            window.scrollY > 20
+                        ) {
+
+                            header.classList.add(
+                                "shadow-md"
+                            );
+
+                        } else {
+
+                            header.classList.remove(
+                                "shadow-md"
+                            );
+
+                        }
+
+                    }
+                );
+
+            }
+
+
+            /* Menu mobile */
+
+            const btn =
+                document.getElementById(
+                    "mobile-menu-btn"
+                );
+
+            const menu =
+                document.getElementById(
+                    "mobile-menu"
+                );
+
+
+            if (btn && menu) {
+
+                btn.addEventListener(
+                    "click",
+                    function () {
+
+                        menu.classList.toggle(
+                            "hidden"
+                        );
+
+                    }
+                );
+
+            }
+
+
+            checkAdminHash();
+
+            window.addEventListener(
+                "hashchange",
+                checkAdminHash
+            );
+
+        }
+    );
+
+
+    /* =========================================================
+       MODAL DE AGENDAMENTO
+    ========================================================= */
+
+    const modal =
+        document.getElementById(
+            "booking-modal"
+        );
+
+
+    window.openBookingModal =
+        function () {
+
+            if (modal) {
+
+                modal.classList.remove(
+                    "hidden"
+                );
+
+
+                const form =
+                    document.getElementById(
+                        "booking-form"
+                    );
+
+
+                if (form) {
+
+                    form.reset();
+
+                }
+
+            }
+
+        };
+
+
+    window.closeBookingModal =
+        function () {
+
+            if (modal) {
+
+                modal.classList.add(
+                    "hidden"
+                );
+
+            }
+
+        };
+
+
+    window.submitBooking =
+        function () {
+
+            const date =
+                document.getElementById(
+                    "b-date"
+                )?.value || "";
+
+
+            const time =
+                document.getElementById(
+                    "b-time"
+                )?.value || "";
+
+
+            const name =
+                document.getElementById(
+                    "b-name"
+                )?.value || "";
+
+
+            const desc =
+                document.getElementById(
+                    "b-desc"
+                )?.value || "";
+
+
+            if (
+                !date ||
+                !time ||
+                !name
+            ) {
+
+                showAlert(
+                    "Campos Obrigatórios",
+                    "Preencha a data, horário e seu nome."
+                );
+
+                return;
+
+            }
+
+
+            const parts =
+                date.split("-");
+
+
+            const formattedDate =
+                `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+
+            let text =
+                `Olá Thaís! Meu nome é *${name}*.\n\n` +
+                `Gostaria de consultar disponibilidade de agendamento para:\n` +
+                `📅 *Data:* ${formattedDate}\n` +
+                `⏰ *Horário:* ${time}`;
+
+
+            if (desc) {
+
+                text +=
+                    `\n📝 *Detalhes:* ${desc}`;
+
+            }
+
+
+            const url =
+                `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+
+
+            closeBookingModal();
+
+            window.open(
+                url,
+                "_blank"
+            );
+
+        };
+
+
+    /* =========================================================
+       RENDERIZAÇÃO DO SITE
+    ========================================================= */
+
+    function renderSiteContent() {
+
+        const data =
+            getSiteData();
+
+
+        /* Início */
+
+        const homeBg =
+            document.getElementById(
+                "home-display-bg"
+            );
+
+
+        if (homeBg) {
+
+            homeBg.src =
+                data.homePhoto ||
+                defaultSiteData.homePhoto;
+
+        }
+
+
+        /* Portfólio */
+
+        const portfolioBg =
+            document.getElementById(
+                "portfolio-display-bg"
+            );
+
+
+        const portfolioCard =
+            document.getElementById(
+                "portfolio-card-img"
+            );
+
+
+        const portfolioPhoto =
+            data.portfolioPhoto ||
+            defaultSiteData.portfolioPhoto;
+
+
+        if (portfolioBg) {
+
+            portfolioBg.src =
+                portfolioPhoto;
+
+        }
+
+
+        if (portfolioCard) {
+
+            portfolioCard.src =
+                portfolioPhoto;
+
+        }
+
+
+        /* Sobre */
+
+        const aboutImg =
+            document.getElementById(
+                "about-display-img"
+            );
+
+
+        const aboutText =
+            document.getElementById(
+                "about-display-text"
+            );
+
+
+        if (aboutImg) {
+
+            aboutImg.src =
+                data.about.photoUrl;
+
+        }
+
+
+        if (aboutText) {
+
+            aboutText.textContent =
+                data.about.text;
+
+        }
+
+
+        /* FAQ */
+
+        const faqList =
+            document.getElementById(
+                "faq-list"
+            );
+
+
+        if (faqList) {
+
+            faqList.innerHTML = "";
+
+
+            const faqs =
+                data.faqs ||
+                defaultSiteData.faqs;
+
+
+            faqs.forEach(
+                function (faq, index) {
+
+                    const item =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    item.className =
+                        "border border-gray-200 rounded-xl bg-gray-50 overflow-hidden";
+
+
+                    const button =
+                        document.createElement(
+                            "button"
+                        );
+
+
+                    button.className =
+                        "w-full text-left px-6 py-4 flex justify-between items-center focus:outline-none hover:bg-gray-100";
+
+
+                    button.onclick =
+                        function () {
+
+                            toggleFaq(index);
+
+                        };
+
+
+                    const question =
+                        document.createElement(
+                            "span"
+                        );
+
+
+                    question.className =
+                        "font-semibold text-brand-black text-lg pr-4";
+
+
+                    question.textContent =
+                        faq.question;
+
+
+                    const icon =
+                        document.createElement(
+                            "i"
+                        );
+
+
+                    icon.id =
+                        `faq-icon-${index}`;
+
+
+                    icon.className =
+                        "fas fa-chevron-down text-brand-gray-dark transition-transform duration-300";
+
+
+                    button.appendChild(
+                        question
+                    );
+
+
+                    button.appendChild(
+                        icon
+                    );
+
+
+                    const answer =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    answer.id =
+                        `faq-answer-${index}`;
+
+
+                    answer.className =
+                        "max-h-0 overflow-hidden transition-all duration-300 bg-white";
+
+
+                    const answerText =
+                        document.createElement(
+                            "p"
+                        );
+
+
+                    answerText.className =
+                        "p-6 text-brand-gray-dark font-light leading-relaxed whitespace-pre-line";
+
+
+                    answerText.textContent =
+                        faq.answer;
+
+
+                    answer.appendChild(
+                        answerText
+                    );
+
+
+                    item.appendChild(
+                        button
+                    );
+
+
+                    item.appendChild(
+                        answer
+                    );
+
+
+                    faqList.appendChild(
+                        item
+                    );
+
+                }
+            );
+
+        }
+
+
+        renderAdminFields();
+
+    }
+
+
+    /* =========================================================
+       CAMPOS DO ADMIN
+    ========================================================= */
+
+    function renderAdminFields() {
+
+        const data =
+            getSiteData();
+
+
+        const home =
+            document.getElementById(
+                "admin-home-img"
+            );
+
+
+        const portfolio =
+            document.getElementById(
+                "admin-portfolio-img"
+            );
+
+
+        const about =
+            document.getElementById(
+                "admin-about-img"
+            );
+
+
+        const aboutText =
+            document.getElementById(
+                "admin-about-text"
+            );
+
+
+        if (home) {
+
+            home.value =
+                data.homePhoto || "";
+
+        }
+
+
+        if (portfolio) {
+
+            portfolio.value =
+                data.portfolioPhoto || "";
+
+        }
+
+
+        if (about) {
+
+            about.value =
+                data.about.photoUrl || "";
+
+        }
+
+
+        if (aboutText) {
+
+            aboutText.value =
+                data.about.text || "";
+
+        }
+
+
+        renderAdminFaqs();
+
+    }
+
+
+    /* =========================================================
+       FAQ
+    ========================================================= */
+
+    window.toggleFaq =
+        function (index) {
+
+            const answer =
+                document.getElementById(
+                    `faq-answer-${index}`
+                );
+
+
+            const icon =
+                document.getElementById(
+                    `faq-icon-${index}`
+                );
+
+
+            if (!answer) return;
+
+
+            if (answer.style.maxHeight) {
+
+                answer.style.maxHeight =
+                    null;
+
+
+                if (icon) {
+
+                    icon.classList.remove(
+                        "rotate-180"
+                    );
+
+                }
+
+                return;
+
+            }
+
+
+            const data =
+                getSiteData();
+
+
+            const faqs =
+                data.faqs ||
+                defaultSiteData.faqs;
+
+
+            faqs.forEach(
+                function (_, i) {
+
+                    const div =
+                        document.getElementById(
+                            `faq-answer-${i}`
+                        );
+
+
+                    const ic =
+                        document.getElementById(
+                            `faq-icon-${i}`
+                        );
+
+
+                    if (div) {
+
+                        div.style.maxHeight =
+                            null;
+
+                    }
+
+
+                    if (ic) {
+
+                        ic.classList.remove(
+                            "rotate-180"
+                        );
+
+                    }
+
+                }
+            );
+
+
+            answer.style.maxHeight =
+                answer.scrollHeight + "px";
+
+
+            if (icon) {
+
+                icon.classList.add(
+                    "rotate-180"
+                );
+
+            }
+
+        };
+
+
+    /* =========================================================
+       ADMIN
+    ========================================================= */
+
+    let isAuthenticated = false;
+
+
+    const loginModalAdmin =
+        document.getElementById(
+            "admin-login-modal"
+        );
+
+
+    function checkAdminHash() {
+
+        if (
+            window.location.hash ===
+            "#admin"
+        ) {
+
+            if (!isAuthenticated) {
+
+                const input =
+                    document.getElementById(
+                        "admin-password-input"
+                    );
+
+
+                if (input) {
+
+                    input.value = "";
+
+                }
+
+
+                if (loginModalAdmin) {
+
+                    loginModalAdmin.classList.remove(
+                        "hidden"
+                    );
+
+                    loginModalAdmin.classList.add(
+                        "flex"
+                    );
+
+                }
+
+            } else {
+
+                showAdminPanel();
+
+            }
+
+        } else {
+
+            hideAdminPanel();
+
+            if (loginModalAdmin) {
+
+                loginModalAdmin.classList.add(
+                    "hidden"
+                );
+
+                loginModalAdmin.classList.remove(
+                    "flex"
+                );
+
+            }
+
+        }
+
+    }
+
+
+    window.cancelAdminLogin =
+        function () {
+
+            if (loginModalAdmin) {
+
+                loginModalAdmin.classList.add(
+                    "hidden"
+                );
+
+                loginModalAdmin.classList.remove(
+                    "flex"
+                );
+
+            }
+
+
+            history.pushState(
+                "",
+                document.title,
+                window.location.pathname
+            );
+
+        };
+
+
+    window.verifyAdminPassword =
+        function () {
+
+            const input =
+                document.getElementById(
+                    "admin-password-input"
+                );
+
+
+            const password =
+                input?.value || "";
+
+
+            if (
+                password ===
+                ADMIN_PASS
+            ) {
+
+                isAuthenticated =
+                    true;
+
+
+                if (loginModalAdmin) {
+
+                    loginModalAdmin.classList.add(
+                        "hidden"
+                    );
+
+                    loginModalAdmin.classList.remove(
+                        "flex"
+                    );
+
+                }
+
+
+                showAdminPanel();
+
+            } else {
+
+                showAlert(
+                    "Acesso Negado",
+                    "Senha incorreta."
+                );
+
+            }
+
+        };
+
+
+    window.logoutAdmin =
+        function () {
+
+            isAuthenticated =
+                false;
+
+
+            history.pushState(
+                "",
+                document.title,
+                window.location.pathname
+            );
+
+
+            hideAdminPanel();
+
+
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+
+        };
+
+
+    function showAdminPanel() {
+
+        const panel =
+            document.getElementById(
+                "admin-panel"
+            );
+
+
+        if (!panel) return;
+
+
+        panel.classList.remove(
+            "hidden"
+        );
+
+
+        renderAdminFields();
+
+
+        setTimeout(
+            function () {
+
+                panel.scrollIntoView({
+                    behavior: "smooth"
+                });
+
+            },
+            100
+        );
+
+    }
+
+
+    function hideAdminPanel() {
+
+        const panel =
+            document.getElementById(
+                "admin-panel"
+            );
+
+
+        if (panel) {
+
+            panel.classList.add(
+                "hidden"
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       SALVAR CAPA DO INÍCIO
+    ========================================================= */
+
+    const editHomeForm =
+        document.getElementById(
+            "edit-home-form"
+        );
+
+
+    if (editHomeForm) {
+
+        editHomeForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+
+                const button =
+                    editHomeForm.querySelector(
+                        "button[type='submit']"
+                    );
+
+
+                const fileInput =
+                    document.getElementById(
+                        "admin-home-file"
+                    );
+
+
+                const urlInput =
+                    document.getElementById(
+                        "admin-home-img"
+                    );
+
+
+                try {
+
+                    if (button) {
+
+                        button.disabled =
+                            true;
+
+                        button.innerHTML =
+                            '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
+
+                    }
+
+
+                    let imageURL =
+                        urlInput?.value.trim() ||
+                        "";
+
+
+                    const file =
+                        fileInput?.files?.[0];
+
+
+                    if (file) {
+
+                        imageURL =
+                            await uploadImage(
+                                file,
+                                "home"
+                            );
+
+                    }
+
+
+                    if (!imageURL) {
+
+                        throw new Error(
+                            "Escolha uma imagem ou informe uma URL."
+                        );
+
+                    }
+
+
+                    const data =
+                        JSON.parse(
+                            JSON.stringify(
+                                getSiteData()
+                            )
+                        );
+
+
+                    data.homePhoto =
+                        imageURL;
+
+
+                    const saved =
+                        await saveSiteDataToCloud(
+                            data
+                        );
+
+
+                    if (saved) {
+
+                        showAdminFeedback(
+                            "home-feedback",
+                            "Capa do início salva com sucesso!",
+                            "bg-green-100 text-green-800"
+                        );
+
+
+                        if (fileInput) {
+
+                            fileInput.value =
+                                "";
+
+                        }
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Erro no upload:",
+                        error
+                    );
+
+
+                    showAdminFeedback(
+                        "home-feedback",
+                        error.message ||
+                            "Erro ao enviar imagem.",
+                        "bg-red-100 text-red-800"
+                    );
+
+                } finally {
+
+                    if (button) {
+
+                        button.disabled =
+                            false;
+
+                        button.innerHTML =
+                            '<i class="fas fa-cloud-upload-alt mr-2"></i> Salvar Capa Início';
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       SALVAR CAPA DO PORTFÓLIO
+    ========================================================= */
+
+    const editPortfolioForm =
+        document.getElementById(
+            "edit-portfolio-form"
+        );
+
+
+    if (editPortfolioForm) {
+
+        editPortfolioForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+
+                const button =
+                    editPortfolioForm.querySelector(
+                        "button[type='submit']"
+                    );
+
+
+                const fileInput =
+                    document.getElementById(
+                        "admin-portfolio-file"
+                    );
+
+
+                const urlInput =
+                    document.getElementById(
+                        "admin-portfolio-img"
+                    );
+
+
+                try {
+
+                    if (button) {
+
+                        button.disabled =
+                            true;
+
+                        button.innerHTML =
+                            '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
+
+                    }
+
+
+                    let imageURL =
+                        urlInput?.value.trim() ||
+                        "";
+
+
+                    const file =
+                        fileInput?.files?.[0];
+
+
+                    if (file) {
+
+                        imageURL =
+                            await uploadImage(
+                                file,
+                                "portfolio"
+                            );
+
+                    }
+
+
+                    if (!imageURL) {
+
+                        throw new Error(
+                            "Escolha uma imagem ou informe uma URL."
+                        );
+
+                    }
+
+
+                    const data =
+                        JSON.parse(
+                            JSON.stringify(
+                                getSiteData()
+                            )
+                        );
+
+
+                    data.portfolioPhoto =
+                        imageURL;
+
+
+                    const saved =
+                        await saveSiteDataToCloud(
+                            data
+                        );
+
+
+                    if (saved) {
+
+                        showAdminFeedback(
+                            "portfolio-feedback",
+                            "Capa do portfólio salva com sucesso!",
+                            "bg-green-100 text-green-800"
+                        );
+
+
+                        if (fileInput) {
+
+                            fileInput.value =
+                                "";
+
+                        }
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Erro no upload:",
+                        error
+                    );
+
+
+                    showAdminFeedback(
+                        "portfolio-feedback",
+                        error.message ||
+                            "Erro ao enviar imagem.",
+                        "bg-red-100 text-red-800"
+                    );
+
+                } finally {
+
+                    if (button) {
+
+                        button.disabled =
+                            false;
+
+                        button.innerHTML =
+                            '<i class="fas fa-cloud-upload-alt mr-2"></i> Salvar Capa Portfólio';
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       SALVAR FOTO + TEXTO SOBRE
+    ========================================================= */
+
+    const editAboutForm =
+        document.getElementById(
+            "edit-about-form"
+        );
+
+
+    if (editAboutForm) {
+
+        editAboutForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+
+                const button =
+                    editAboutForm.querySelector(
+                        "button[type='submit']"
+                    );
+
+
+                const fileInput =
+                    document.getElementById(
+                        "admin-about-file"
+                    );
+
+
+                const urlInput =
+                    document.getElementById(
+                        "admin-about-img"
+                    );
+
+
+                const textInput =
+                    document.getElementById(
+                        "admin-about-text"
+                    );
+
+
+                try {
+
+                    if (button) {
+
+                        button.disabled =
+                            true;
+
+                        button.innerHTML =
+                            '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
+
+                    }
+
+
+                    let imageURL =
+                        urlInput?.value.trim() ||
+                        "";
+
+
+                    const file =
+                        fileInput?.files?.[0];
+
+
+                    if (file) {
+
+                        imageURL =
+                            await uploadImage(
+                                file,
+                                "about"
+                            );
+
+                    }
+
+
+                    const text =
+                        textInput?.value.trim() ||
+                        "";
+
+
+                    if (!imageURL) {
+
+                        throw new Error(
+                            "Escolha uma foto ou informe uma URL."
+                        );
+
+                    }
+
+
+                    if (!text) {
+
+                        throw new Error(
+                            "Digite o texto de apresentação."
+                        );
+
+                    }
+
+
+                    const data =
+                        JSON.parse(
+                            JSON.stringify(
+                                getSiteData()
+                            )
+                        );
+
+
+                    data.about.photoUrl =
+                        imageURL;
+
+
+                    data.about.text =
+                        text;
+
+
+                    const saved =
+                        await saveSiteDataToCloud(
+                            data
+                        );
+
+
+                    if (saved) {
+
+                        showAdminFeedback(
+                            "about-feedback",
+                            "Perfil salvo com sucesso!",
+                            "bg-green-100 text-green-800"
+                        );
+
+
+                        if (fileInput) {
+
+                            fileInput.value =
+                                "";
+
+                        }
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Erro no upload:",
+                        error
+                    );
+
+
+                    showAdminFeedback(
+                        "about-feedback",
+                        error.message ||
+                            "Erro ao enviar imagem.",
+                        "bg-red-100 text-red-800"
+                    );
+
+                } finally {
+
+                    if (button) {
+
+                        button.disabled =
+                            false;
+
+                        button.innerHTML =
+                            '<i class="fas fa-cloud-upload-alt mr-2"></i> Salvar Sobre';
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       ADICIONAR FAQ
+    ========================================================= */
+
+    const addFaqForm =
+        document.getElementById(
+            "add-faq-form"
+        );
+
+
+    if (addFaqForm) {
+
+        addFaqForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+
+                const question =
+                    document.getElementById(
+                        "faqQuestion"
+                    )?.value.trim() ||
+                    "";
+
+
+                const answer =
+                    document.getElementById(
+                        "faqAnswer"
+                    )?.value.trim() ||
+                    "";
+
+
+                if (!question || !answer) {
+
+                    showAlert(
+                        "Campos obrigatórios",
+                        "Preencha a pergunta e a resposta."
+                    );
+
+                    return;
+
+                }
+
+
+                const data =
+                    JSON.parse(
+                        JSON.stringify(
+                            getSiteData()
+                        )
+                    );
+
+
+                if (!Array.isArray(data.faqs)) {
+
+                    data.faqs = [];
+
+                }
+
+
+                data.faqs.push({
+
+                    question,
+
+                    answer
+
+                });
+
+
+                const saved =
+                    await saveSiteDataToCloud(
+                        data
+                    );
+
+
+                if (saved) {
+
+                    addFaqForm.reset();
+
+
+                    showAdminFeedback(
+                        "faq-feedback",
+                        "Dúvida adicionada com sucesso!",
+                        "bg-green-100 text-green-800"
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       LISTA DE FAQ NO ADMIN
+    ========================================================= */
+
+    function renderAdminFaqs() {
+
+        const list =
+            document.getElementById(
+                "admin-faqs-list"
+            );
+
+
+        if (!list) return;
+
+
+        const data =
+            getSiteData();
+
+
+        const faqs =
+            data.faqs ||
+            defaultSiteData.faqs;
+
+
+        list.innerHTML = "";
+
+
+        faqs.forEach(
+            function (faq, index) {
+
+                const item =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                item.className =
+                    "flex justify-between items-start p-4 bg-gray-50 border border-gray-200 rounded-lg";
+
+
+                const text =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                text.className =
+                    "pr-4 w-full";
+
+
+                const question =
+                    document.createElement(
+                        "p"
+                    );
+
+
+                question.className =
+                    "font-bold text-sm text-brand-black mb-1";
+
+
+                question.textContent =
+                    faq.question;
+
+
+                const answer =
+                    document.createElement(
+                        "p"
+                    );
+
+
+                answer.className =
+                    "text-xs text-gray-600 line-clamp-2";
+
+
+                answer.textContent =
+                    faq.answer;
+
+
+                text.appendChild(
+                    question
+                );
+
+
+                text.appendChild(
+                    answer
+                );
+
+
+                const button =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                button.className =
+                    "text-gray-400 hover:text-red-600 p-2 ml-2";
+
+
+                button.innerHTML =
+                    '<i class="fas fa-trash"></i>';
+
+
+                button.onclick =
+                    function () {
+
+                        deleteFaq(index);
+
+                    };
+
+
+                item.appendChild(
+                    text
+                );
+
+
+                item.appendChild(
+                    button
+                );
+
+
+                list.appendChild(
+                    item
+                );
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       EXCLUIR FAQ
+    ========================================================= */
+
+    window.deleteFaq =
+        async function (index) {
+
+            const data =
+                JSON.parse(
+                    JSON.stringify(
+                        getSiteData()
+                    )
+                );
+
+
+            if (!Array.isArray(data.faqs)) {
+
+                data.faqs = [];
+
+            }
+
+
+            data.faqs.splice(
+                index,
+                1
+            );
+
+
+            const saved =
+                await saveSiteDataToCloud(
+                    data
+                );
+
+
+            if (saved) {
+
+                showAdminFeedback(
+                    "faq-feedback",
+                    "Dúvida removida com sucesso!",
+                    "bg-green-100 text-green-800"
+                );
+
+            }
+
+        };
+
+
+    /* =========================================================
+       ENTER NO LOGIN
+    ========================================================= */
+
+    const adminPassInput =
+        document.getElementById(
+            "admin-password-input"
+        );
+
+
+    if (adminPassInput) {
+
+        adminPassInput.addEventListener(
+            "keypress",
+            function (event) {
+
+                if (
+                    event.key ===
+                    "Enter"
+                ) {
+
+                    verifyAdminPassword();
+
+                }
+
+            }
+        );
+
+    }
+
+</script>
+    
     <script>
         tailwind.config = {
             theme: {
