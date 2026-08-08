@@ -20,7 +20,6 @@
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCOhIm4HfiNHGpB_KcueQRxFbjKnIrGC3Q",
@@ -35,7 +34,6 @@
     let app;
     let db;
     let auth;
-    let storage;
 
     try {
         const existingApps = getApps();
@@ -46,7 +44,6 @@
         }
         db = getFirestore(app);
         auth = getAuth(app);
-        storage = getStorage(app);
     } catch (e) {
         console.warn("Firebase Init Aviso:", e);
     }
@@ -68,9 +65,9 @@
                     await signInAnonymously(auth);
                 }
             }
-            resolve({ app, db, auth, storage, appId, user: auth.currentUser });
+            resolve({ app, db, auth, appId, user: auth.currentUser });
         } catch (err) {
-            resolve({ app, db, auth, storage, appId, user: auth?.currentUser || null });
+            resolve({ app, db, auth, appId, user: auth.currentUser });
         }
     });
 
@@ -158,48 +155,94 @@
     /* =========================================================
        UPLOAD DE IMAGEM (BASE64)
     ========================================================= */
-
-   async function uploadImage(file, folder) {
+async function uploadImage(file, folder) {
     if (!file) {
         throw new Error("Nenhuma imagem foi selecionada.");
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-        throw new Error("A imagem é muito grande. O limite é de 10 MB.");
     }
 
     if (!file.type.startsWith("image/")) {
         throw new Error("O arquivo selecionado não é uma imagem.");
     }
 
-    const fb = await window.firebaseReady;
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-    if (!fb || !fb.storage) {
-        throw new Error("Não foi possível conectar ao Firebase Storage.");
-    }
+        reader.onload = function (event) {
+            const img = new Image();
 
-    const extension = (file.name.split(".").pop() || "jpg")
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "");
+            img.onload = function () {
+                const MAX_WIDTH = 1200;
+                const MAX_HEIGHT = 1200;
 
-    const safeFolder = String(folder || "site")
-        .replace(/[^a-zA-Z0-9_-]/g, "_");
+                let width = img.width;
+                let height = img.height;
 
-    const fileName =
-        `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${extension}`;
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height = Math.round(height * MAX_WIDTH / width);
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width = Math.round(width * MAX_HEIGHT / height);
+                        height = MAX_HEIGHT;
+                    }
+                }
 
-    const storageRef = ref(
-        fb.storage,
-        `site-images/${safeFolder}/${fileName}`
-    );
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
 
-    await uploadBytes(storageRef, file, {
-        contentType: file.type,
-        cacheControl: "public,max-age=31536000"
+                const ctx = canvas.getContext("2d");
+
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // JPEG comprimido para reduzir bastante o tamanho
+                const compressedBase64 = canvas.toDataURL(
+                    "image/jpeg",
+                    0.72
+                );
+
+                // Proteção para não tentar salvar uma imagem grande demais
+                const approximateBytes =
+                    compressedBase64.length * 0.75;
+
+                if (approximateBytes > 750 * 1024) {
+                    reject(
+                        new Error(
+                            "Essa imagem ainda ficou muito grande. Tente usar uma foto menor."
+                        )
+                    );
+                    return;
+                }
+
+                resolve(compressedBase64);
+            };
+
+            img.onerror = function () {
+                reject(
+                    new Error(
+                        "Não foi possível processar essa imagem."
+                    )
+                );
+            };
+
+            img.src = event.target.result;
+        };
+
+        reader.onerror = function () {
+            reject(
+                new Error(
+                    "Erro ao ler a imagem."
+                )
+            );
+        };
+
+        reader.readAsDataURL(file);
     });
-
-    return await getDownloadURL(storageRef);
 }
+  
+
     /* =========================================================
        PRÉVIA DAS IMAGENS
     ========================================================= */
