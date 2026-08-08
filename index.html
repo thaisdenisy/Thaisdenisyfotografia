@@ -19,7 +19,7 @@
 
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCOhIm4HfiNHGpB_KcueQRxFbjKnIrGC3Q",
@@ -78,6 +78,7 @@
     const WHATSAPP_NUMBER = "5516994137996";
     const ADMIN_PASS = "Denisy2026";
     const SITE_DOC_PATH = ["site", "config"];
+    const IMAGE_DOCS = { home: ["siteImages", "home"], portfolio: ["siteImages", "portfolio"], about: ["siteImages", "about"] };
     const LOCAL_STORAGE_KEY = "thais_denisy_site_data_v2";
 
     const defaultSiteData = {
@@ -133,6 +134,51 @@
         renderSiteContent();
     }
 
+    async function saveImageToCloud(kind, base64) {
+        const fb = await window.firebaseReady;
+        if (!fb || !fb.db) throw new Error("Firebase indisponível.");
+        const path = IMAGE_DOCS[kind];
+        if (!path) throw new Error("Tipo de imagem inválido.");
+        await setDoc(doc(fb.db, ...path), { data: base64, updatedAt: Date.now() }, { merge: false });
+        return true;
+    }
+
+    async function clearImageFromCloud(kind) {
+        const fb = await window.firebaseReady;
+        if (!fb || !fb.db) return;
+        const path = IMAGE_DOCS[kind];
+        if (!path) return;
+        try { await deleteDoc(doc(fb.db, ...path)); } catch (e) { console.warn(`Não foi possível remover imagem ${kind}.`, e); }
+    }
+
+    async function loadImagesFromCloud() {
+        const fb = await window.firebaseReady;
+        if (!fb || !fb.db) return;
+
+        const targets = [
+            ["home", "homePhoto"],
+            ["portfolio", "portfolioPhoto"],
+            ["about", "photoUrl"]
+        ];
+
+        for (const [kind, field] of targets) {
+            try {
+                const snap = await getDoc(doc(fb.db, ...IMAGE_DOCS[kind]));
+                if (snap.exists() && snap.data()?.data) {
+                    if (kind === "about") currentSiteData.about.photoUrl = snap.data().data;
+                    else currentSiteData[field] = snap.data().data;
+                }
+            } catch (e) {
+                console.warn(`Não foi possível carregar imagem ${kind}.`, e);
+            }
+        }
+
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentSiteData));
+        } catch (e) {}
+        renderSiteContent();
+    }
+
     /* =========================================================
        SALVAR CONFIGURAÇÕES NO FIRESTORE (COM FALLBACK LOCAL)
     ========================================================= */
@@ -171,8 +217,8 @@ async function uploadImage(file, folder) {
             const img = new Image();
 
             img.onload = function () {
-                const MAX_WIDTH = 1200;
-                const MAX_HEIGHT = 1200;
+                const MAX_WIDTH = 1000;
+                const MAX_HEIGHT = 1000;
 
                 let width = img.width;
                 let height = img.height;
@@ -200,17 +246,17 @@ async function uploadImage(file, folder) {
                 // JPEG comprimido para reduzir bastante o tamanho
                 const compressedBase64 = canvas.toDataURL(
                     "image/jpeg",
-                    0.72
+                    0.62
                 );
 
                 // Proteção para não tentar salvar uma imagem grande demais
                 const approximateBytes =
                     compressedBase64.length * 0.75;
 
-                if (approximateBytes > 750 * 1024) {
+                if (approximateBytes > 650 * 1024) {
                     reject(
                         new Error(
-                            "Essa imagem ainda ficou muito grande. Tente usar uma foto menor."
+                            "Essa imagem ficou grande demais para o Firestore. Tente outra foto ou uma versão menor."
                         )
                     );
                     return;
@@ -321,6 +367,7 @@ async function uploadImage(file, folder) {
 
         // Renderiza os dados imediatamente na tela
         renderSiteContent();
+        loadImagesFromCloud();
 
         try {
             const fb = await window.firebaseReady;
@@ -341,6 +388,7 @@ async function uploadImage(file, folder) {
                                 faqs: Array.isArray(cloudData.faqs) && cloudData.faqs.length > 0 ? cloudData.faqs : (loadLocalData().faqs || defaultSiteData.faqs)
                             };
                             saveLocalData(merged);
+                            loadImagesFromCloud();
                         } else {
                             saveSiteDataToCloud(loadLocalData());
                         }
@@ -627,8 +675,15 @@ async function uploadImage(file, folder) {
                     }
 
                     const data = JSON.parse(JSON.stringify(getSiteData()));
-                    data.homePhoto = imageURL;
+                    if (file) {
+                        await saveImageToCloud("home", imageURL);
+                        data.homePhoto = defaultSiteData.homePhoto;
+                    } else {
+                        await clearImageFromCloud("home");
+                        data.homePhoto = imageURL;
+                    }
                     await saveSiteDataToCloud(data);
+                    if (file) { currentSiteData.homePhoto = imageURL; renderSiteContent(); }
 
                     showAdminFeedback("home-feedback", "Capa do início salva com sucesso!", "bg-green-100 text-green-800");
                     if (fileInput) fileInput.value = "";
@@ -667,8 +722,15 @@ async function uploadImage(file, folder) {
                     }
 
                     const data = JSON.parse(JSON.stringify(getSiteData()));
-                    data.portfolioPhoto = imageURL;
+                    if (file) {
+                        await saveImageToCloud("portfolio", imageURL);
+                        data.portfolioPhoto = defaultSiteData.portfolioPhoto;
+                    } else {
+                        await clearImageFromCloud("portfolio");
+                        data.portfolioPhoto = imageURL;
+                    }
                     await saveSiteDataToCloud(data);
+                    if (file) { currentSiteData.portfolioPhoto = imageURL; renderSiteContent(); }
 
                     showAdminFeedback("portfolio-feedback", "Capa do portfólio salva com sucesso!", "bg-green-100 text-green-800");
                     if (fileInput) fileInput.value = "";
@@ -713,9 +775,16 @@ async function uploadImage(file, folder) {
                     }
 
                     const data = JSON.parse(JSON.stringify(getSiteData()));
-                    data.about.photoUrl = imageURL;
+                    if (file) {
+                        await saveImageToCloud("about", imageURL);
+                        data.about.photoUrl = defaultSiteData.about.photoUrl;
+                    } else {
+                        await clearImageFromCloud("about");
+                        data.about.photoUrl = imageURL;
+                    }
                     data.about.text = text;
                     await saveSiteDataToCloud(data);
+                    if (file) { currentSiteData.about.photoUrl = imageURL; renderSiteContent(); }
 
                     showAdminFeedback("about-feedback", "Perfil salvo com sucesso!", "bg-green-100 text-green-800");
                     if (fileInput) fileInput.value = "";
@@ -857,6 +926,21 @@ async function uploadImage(file, folder) {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        img { max-width: 100%; display: block; }
+
+        @media (max-width: 767px) {
+            #home { min-height: 72vh; }
+            #home-display-bg { object-position: center center; }
+            #portfolio-display-bg, #portfolio-card-img { object-position: center center; }
+            #about-display-img {
+                height: auto !important;
+                max-height: 520px;
+                aspect-ratio: 4 / 5;
+                object-fit: cover;
+                object-position: center top;
+            }
+        }
     </style>
 </head>
 <body class="bg-brand-white text-brand-black font-sans antialiased flex flex-col min-h-screen">
@@ -972,7 +1056,7 @@ async function uploadImage(file, folder) {
                     <div class="w-full lg:w-1/2">
                         <div class="relative">
                             <div class="absolute inset-0 bg-brand-black rounded-2xl transform translate-x-4 translate-y-4 opacity-10"></div>
-                            <img id="about-display-img" src="" alt="Thaís Denisy" class="relative z-10 w-full h-[500px] object-cover rounded-2xl shadow-xl image-hover-effect">
+                            <img id="about-display-img" src="" alt="Thaís Denisy" class="relative z-10 w-full h-auto md:h-[500px] aspect-[4/5] md:aspect-auto object-cover object-top rounded-2xl shadow-xl image-hover-effect">
                         </div>
                     </div>
                     
