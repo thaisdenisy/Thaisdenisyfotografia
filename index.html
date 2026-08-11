@@ -179,10 +179,6 @@
         renderSiteContent();
     }
 
-    /* =========================================================
-       SALVAR CONFIGURAÇÕES NO FIRESTORE (COM FALLBACK LOCAL)
-    ========================================================= */
-
     async function saveSiteDataToCloud(data) {
         saveLocalData(data);
 
@@ -198,100 +194,90 @@
         return true;
     }
 
-    /* =========================================================
-       UPLOAD DE IMAGEM (BASE64)
-    ========================================================= */
-async function uploadImage(file, folder) {
-    if (!file) {
-        throw new Error("Nenhuma imagem foi selecionada.");
-    }
+    async function uploadImage(file, folder) {
+        if (!file) {
+            throw new Error("Nenhuma imagem foi selecionada.");
+        }
 
-    if (!file.type.startsWith("image/")) {
-        throw new Error("O arquivo selecionado não é uma imagem.");
-    }
+        if (!file.type.startsWith("image/")) {
+            throw new Error("O arquivo selecionado não é uma imagem.");
+        }
 
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
 
-        reader.onload = function (event) {
-            const img = new Image();
+            reader.onload = function (event) {
+                const img = new Image();
 
-            img.onload = function () {
-                const MAX_WIDTH = 1000;
-                const MAX_HEIGHT = 1000;
+                img.onload = function () {
+                    const MAX_WIDTH = 1000;
+                    const MAX_HEIGHT = 1000;
 
-                let width = img.width;
-                let height = img.height;
+                    let width = img.width;
+                    let height = img.height;
 
-                if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height = Math.round(height * MAX_WIDTH / width);
-                        width = MAX_WIDTH;
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height = Math.round(height * MAX_WIDTH / width);
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width = Math.round(width * MAX_HEIGHT / height);
+                            height = MAX_HEIGHT;
+                        }
                     }
-                } else {
-                    if (height > MAX_HEIGHT) {
-                        width = Math.round(width * MAX_HEIGHT / height);
-                        height = MAX_HEIGHT;
+
+                    const canvas = document.createElement("canvas");
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext("2d");
+
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedBase64 = canvas.toDataURL(
+                        "image/jpeg",
+                        0.62
+                    );
+
+                    const approximateBytes =
+                        compressedBase64.length * 0.75;
+
+                    if (approximateBytes > 650 * 1024) {
+                        reject(
+                            new Error(
+                                "Essa imagem ficou grande demais para o Firestore. Tente outra foto ou uma versão menor."
+                            )
+                        );
+                        return;
                     }
-                }
 
-                const canvas = document.createElement("canvas");
-                canvas.width = width;
-                canvas.height = height;
+                    resolve(compressedBase64);
+                };
 
-                const ctx = canvas.getContext("2d");
-
-                ctx.drawImage(img, 0, 0, width, height);
-
-                // JPEG comprimido para reduzir bastante o tamanho
-                const compressedBase64 = canvas.toDataURL(
-                    "image/jpeg",
-                    0.62
-                );
-
-                // Proteção para não tentar salvar uma imagem grande demais
-                const approximateBytes =
-                    compressedBase64.length * 0.75;
-
-                if (approximateBytes > 650 * 1024) {
+                img.onerror = function () {
                     reject(
                         new Error(
-                            "Essa imagem ficou grande demais para o Firestore. Tente outra foto ou uma versão menor."
+                            "Não foi possível processar essa imagem."
                         )
                     );
-                    return;
-                }
+                };
 
-                resolve(compressedBase64);
+                img.src = event.target.result;
             };
 
-            img.onerror = function () {
+            reader.onerror = function () {
                 reject(
                     new Error(
-                        "Não foi possível processar essa imagem."
+                        "Erro ao ler a imagem."
                     )
                 );
             };
 
-            img.src = event.target.result;
-        };
-
-        reader.onerror = function () {
-            reject(
-                new Error(
-                    "Erro ao ler a imagem."
-                )
-            );
-        };
-
-        reader.readAsDataURL(file);
-    });
-}
-  
-
-    /* =========================================================
-       PRÉVIA DAS IMAGENS
-    ========================================================= */
+            reader.readAsDataURL(file);
+        });
+    }
 
     function setupImagePreview(inputId, previewContainerId, previewImageId) {
         const input = document.getElementById(inputId);
@@ -316,10 +302,6 @@ async function uploadImage(file, folder) {
             reader.readAsDataURL(file);
         });
     }
-
-    /* =========================================================
-       FEEDBACK DO ADMIN E ALERTAS
-    ========================================================= */
 
     function showAdminFeedback(elementId, message, classes) {
         const element = document.getElementById(elementId);
@@ -351,10 +333,6 @@ async function uploadImage(file, folder) {
         }
     };
 
-    /* =========================================================
-       CARREGAR DADOS NO DOMContentLoaded
-    ========================================================= */
-
     document.addEventListener("DOMContentLoaded", async function () {
         const yearEl = document.getElementById("year");
         if (yearEl) {
@@ -365,7 +343,6 @@ async function uploadImage(file, folder) {
         setupImagePreview("admin-portfolio-file", "portfolio-upload-preview", "portfolio-upload-preview-img");
         setupImagePreview("admin-about-file", "about-upload-preview", "about-upload-preview-img");
 
-        // Renderiza os dados imediatamente na tela
         renderSiteContent();
         loadImagesFromCloud();
 
@@ -425,10 +402,6 @@ async function uploadImage(file, folder) {
         window.addEventListener("hashchange", checkAdminHash);
     });
 
-    /* =========================================================
-       MODAL DE AGENDAMENTO
-    ========================================================= */
-
     const modal = document.getElementById("booking-modal");
 
     window.openBookingModal = function () {
@@ -459,7 +432,7 @@ async function uploadImage(file, folder) {
         const parts = date.split("-");
         const formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-        let text = `Olá Thaís! Meu nome é *${name}*.\n\nGostaria de consultar disponibilidade de agendamento para:\n📅 *Data:* ${formattedDate}\n⏰ *Horário:* ${time}`;
+        let text = `Olá Thaís! Meu nome é *${name}*.\n\nGostaria de solicitar o agendamento de uma sessão para:\n📅 *Data:* ${formattedDate}\n⏰ *Horário:* ${time}`;
         if (desc) {
             text += `\n📝 *Detalhes:* ${desc}`;
         }
@@ -468,10 +441,6 @@ async function uploadImage(file, folder) {
         closeBookingModal();
         window.open(url, "_blank");
     };
-
-    /* =========================================================
-       RENDERIZAÇÃO DO SITE E ADMIN
-    ========================================================= */
 
     function renderSiteContent() {
         const data = getSiteData();
@@ -501,29 +470,29 @@ async function uploadImage(file, folder) {
 
             faqs.forEach(function (faq, index) {
                 const item = document.createElement("div");
-                item.className = "border border-gray-200 rounded-xl bg-gray-50 overflow-hidden";
+                item.className = "border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md";
 
                 const button = document.createElement("button");
-                button.className = "w-full text-left px-6 py-4 flex justify-between items-center focus:outline-none hover:bg-gray-100";
+                button.className = "w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-gray-50 transition-colors";
                 button.onclick = function () { toggleFaq(index); };
 
                 const question = document.createElement("span");
-                question.className = "font-semibold text-brand-black text-lg pr-4";
+                question.className = "font-semibold text-brand-dark text-base sm:text-lg pr-4";
                 question.textContent = faq.question;
 
                 const icon = document.createElement("i");
                 icon.id = `faq-icon-${index}`;
-                icon.className = "fas fa-chevron-down text-brand-gray-dark transition-transform duration-300";
+                icon.className = "fas fa-chevron-down text-brand-medium transition-transform duration-300";
 
                 button.appendChild(question);
                 button.appendChild(icon);
 
                 const answer = document.createElement("div");
                 answer.id = `faq-answer-${index}`;
-                answer.className = "max-h-0 overflow-hidden transition-all duration-300 bg-white";
+                answer.className = "max-h-0 overflow-hidden transition-all duration-300 bg-gray-50/50";
 
                 const answerText = document.createElement("p");
-                answerText.className = "p-6 text-brand-gray-dark font-light leading-relaxed whitespace-pre-line";
+                answerText.className = "p-6 text-brand-medium font-light leading-relaxed whitespace-pre-line text-sm sm:text-base";
                 answerText.textContent = faq.answer;
 
                 answer.appendChild(answerText);
@@ -575,10 +544,6 @@ async function uploadImage(file, folder) {
         answer.style.maxHeight = answer.scrollHeight + "px";
         if (icon) icon.classList.add("rotate-180");
     };
-
-    /* =========================================================
-       ADMIN AUTH & ACTIONS
-    ========================================================= */
 
     let isAuthenticated = false;
     const loginModalAdmin = document.getElementById("admin-login-modal");
@@ -848,7 +813,7 @@ async function uploadImage(file, folder) {
             text.className = "pr-4 w-full";
 
             const question = document.createElement("p");
-            question.className = "font-bold text-sm text-brand-black mb-1";
+            question.className = "font-bold text-sm text-brand-dark mb-1";
             question.textContent = faq.question;
 
             const answer = document.createElement("p");
@@ -888,10 +853,23 @@ async function uploadImage(file, folder) {
             theme: {
                 extend: {
                     colors: {
-                        'brand-black': '#111111',
-                        'brand-gray-dark': '#333333',
-                        'brand-gray-light': '#F3F4F6',
+                        'brand-dark': '#4A3525',    // Espresso / Marrom Escuro
+                        'brand-medium': '#8B6D55',  // Mocha / Marrom Médio
+                        'brand-light': '#FDFBF7',   // Creme Quente
                         'brand-white': '#FFFFFF',
+                        // Redefinindo o gray padrão do Tailwind para tons terrosos/marrons
+                        gray: {
+                            50: '#F9F8F6',
+                            100: '#F2EFEA',
+                            200: '#E4DFD6',
+                            300: '#D5CFC3',
+                            400: '#AFA89A',
+                            500: '#8C8578',
+                            600: '#696256',
+                            700: '#524C42',
+                            800: '#3D3830',
+                            900: '#2A2620',
+                        }
                     },
                     fontFamily: {
                         'serif': ['"Playfair Display"', 'serif'],
@@ -904,9 +882,9 @@ async function uploadImage(file, folder) {
 
     <style>
         .glass-effect {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
         
         .image-hover-effect {
@@ -914,28 +892,28 @@ async function uploadImage(file, folder) {
         }
         
         .image-hover-effect:hover {
-            transform: scale(1.03);
-            filter: brightness(1.1);
+            transform: scale(1.02);
+            filter: brightness(1.05);
         }
 
         .fade-in {
-            animation: fadeIn 0.8s ease-in-out;
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(16px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         img { max-width: 100%; display: block; }
 
         @media (max-width: 767px) {
-            #home { min-height: 72vh; }
+            #home { min-height: 80vh; }
             #home-display-bg { object-position: center center; }
             #portfolio-display-bg, #portfolio-card-img { object-position: center center; }
             #about-display-img {
                 height: auto !important;
-                max-height: 520px;
+                max-height: 480px;
                 aspect-ratio: 4 / 5;
                 object-fit: cover;
                 object-position: center top;
@@ -943,105 +921,111 @@ async function uploadImage(file, folder) {
         }
     </style>
 </head>
-<body class="bg-brand-white text-brand-black font-sans antialiased flex flex-col min-h-screen">
+<body class="bg-brand-white text-brand-dark font-sans antialiased flex flex-col min-h-screen selection:bg-brand-dark selection:text-white">
 
-    <header class="fixed w-full top-0 z-50 glass-effect border-b border-brand-gray-light shadow-sm transition-all duration-300" id="header">
+    <header class="fixed w-full top-0 z-50 glass-effect border-b border-gray-100 shadow-sm transition-all duration-300" id="header">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
+            <div class="flex justify-between items-center h-16 sm:h-20">
                 <div class="flex-shrink-0 flex items-center">
-                    <a href="#" class="font-serif text-2xl font-bold tracking-widest text-brand-black uppercase">
-                        Thaís Denisy<br><span class="text-xs font-sans font-light tracking-[0.3em] text-brand-gray-dark block mt-1">Fotografia</span>
+                    <a href="#home" class="flex items-center group py-2">
+                        <div class="w-10 h-10 rounded-xl bg-brand-dark text-white flex items-center justify-center shadow-md transition-transform duration-300 group-hover:scale-105">
+                            <i class="fas fa-camera text-lg"></i>
+                        </div>
                     </a>
                 </div>
                 
-                <nav class="hidden md:flex space-x-8">
-                    <a href="#home" class="text-brand-gray-dark hover:text-brand-black px-3 py-2 text-sm font-medium transition-colors">Início</a>
-                    <a href="#portfolio" class="text-brand-gray-dark hover:text-brand-black px-3 py-2 text-sm font-medium transition-colors">Portfólio</a>
-                    <a href="#sobre" class="text-brand-gray-dark hover:text-brand-black px-3 py-2 text-sm font-medium transition-colors">Sobre</a>
-                    <a href="#faq" class="text-brand-gray-dark hover:text-brand-black px-3 py-2 text-sm font-medium transition-colors">Dúvidas</a>
+                <nav class="hidden md:flex space-x-8 items-center">
+                    <a href="#home" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Início</a>
+                    <a href="#portfolio" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Portfólio</a>
+                    <a href="#sobre" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Sobre</a>
+                    <a href="#faq" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Dúvidas</a>
                 </nav>
 
                 <div class="hidden md:flex items-center">
-                    <button onclick="openBookingModal()" class="bg-brand-black text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-brand-gray-dark transition-all duration-300 shadow-md">
-                        Consultar Disponibilidade
+                    <button onclick="openBookingModal()" class="bg-brand-dark text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-brand-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0">
+                        Agendar sessão
                     </button>
                 </div>
 
                 <div class="flex items-center md:hidden">
-                    <button id="mobile-menu-btn" class="text-brand-gray-dark hover:text-brand-black focus:outline-none p-2">
-                        <i class="fas fa-bars text-2xl"></i>
+                    <button id="mobile-menu-btn" class="text-brand-medium hover:text-brand-dark focus:outline-none p-2.5 rounded-xl bg-brand-light border border-gray-200">
+                        <i class="fas fa-bars text-xl"></i>
                     </button>
                 </div>
             </div>
         </div>
 
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-brand-gray-light absolute w-full">
-            <div class="px-2 pt-2 pb-4 space-y-1 sm:px-3 shadow-lg">
-                <a href="#home" class="block px-3 py-2 rounded-md text-base font-medium text-brand-gray-dark hover:text-brand-black">Início</a>
-                <a href="#portfolio" class="block px-3 py-2 rounded-md text-base font-medium text-brand-gray-dark hover:text-brand-black">Portfólio</a>
-                <a href="#sobre" class="block px-3 py-2 rounded-md text-base font-medium text-brand-gray-dark hover:text-brand-black">Sobre</a>
-                <a href="#faq" class="block px-3 py-2 rounded-md text-base font-medium text-brand-gray-dark hover:text-brand-black">Dúvidas</a>
-                <button onclick="openBookingModal(); document.getElementById('mobile-menu').classList.add('hidden');" class="w-full text-left block px-3 py-2 rounded-md text-base font-bold text-brand-black mt-2">
-                    Consultar Disponibilidade
-                </button>
+        <div id="mobile-menu" class="hidden md:hidden bg-white/95 backdrop-blur-xl border-b border-gray-100 absolute w-full shadow-2xl transition-all">
+            <div class="px-4 pt-4 pb-6 space-y-2">
+                <a href="#home" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Início</a>
+                <a href="#portfolio" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Portfólio</a>
+                <a href="#sobre" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Sobre</a>
+                <a href="#faq" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Dúvidas</a>
+                <div class="pt-2">
+                    <button onclick="openBookingModal(); document.getElementById('mobile-menu').classList.add('hidden');" class="w-full text-center bg-brand-dark text-white px-6 py-3.5 rounded-xl font-medium text-base shadow-md">
+                        Agendar sessão
+                    </button>
+                </div>
             </div>
         </div>
     </header>
 
     <main class="flex-grow pt-20">
-        <section id="home" class="relative bg-brand-gray-light flex items-center justify-center min-h-[85vh] overflow-hidden">
-            <div id="home-bg-container" class="absolute inset-0 z-0 opacity-25 md:opacity-15">
+        <section id="home" class="relative bg-brand-light flex items-center justify-center min-h-[85vh] overflow-hidden">
+            <div id="home-bg-container" class="absolute inset-0 z-0 opacity-20 md:opacity-15">
                 <img id="home-display-bg" src="" alt="Background" class="w-full h-full object-cover">
             </div>
             <div class="absolute inset-0 z-0 opacity-10">
-                <div class="absolute top-10 left-10 w-72 h-72 bg-brand-gray-dark rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
-                <div class="absolute top-10 right-10 w-72 h-72 bg-brand-black rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+                <div class="absolute top-10 left-10 w-72 h-72 bg-brand-medium rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+                <div class="absolute top-10 right-10 w-72 h-72 bg-brand-dark rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
             </div>
 
-            <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center fade-in py-12">
-                <h1 class="font-serif text-4xl sm:text-6xl md:text-7xl font-bold text-brand-black mb-6 leading-tight">
+            <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center fade-in py-16">
+                <span class="inline-block text-xs uppercase tracking-[0.4em] text-brand-medium bg-white/80 px-4 py-2 rounded-full border border-gray-200 shadow-xs mb-6">Fotografia Profissional</span>
+                <h1 class="font-serif text-4xl sm:text-6xl md:text-7xl font-bold text-brand-dark mb-6 leading-tight">
                     <span class="block">THAÍS DENISY</span>
-                    <span class="block italic font-light text-brand-gray-dark text-2xl sm:text-4xl mt-2">Fotografia</span>
+                    <span class="block italic font-light text-brand-medium text-2xl sm:text-4xl mt-3">Fotografia</span>
                 </h1>
-                <p class="mt-4 text-lg sm:text-2xl text-brand-gray-dark font-light mb-10 max-w-2xl mx-auto">
-                     Momentos eternos, memórias vivas.
+                <p class="mt-4 text-lg sm:text-xl text-brand-medium font-light mb-10 max-w-xl mx-auto leading-relaxed">
+                    Momentos eternos, memórias vivas capturadas com sofisticação e sensibilidade.
                 </p>
-                <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-6">
-                    <button onclick="openBookingModal()" class="w-full sm:w-auto bg-brand-black text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-brand-gray-dark transition-all duration-300 shadow-xl">
-                        Consultar Disponibilidade
+                <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-5 w-full max-w-md mx-auto">
+                    <button onclick="openBookingModal()" class="w-full sm:w-auto bg-brand-dark text-white px-8 py-4 rounded-full text-base font-medium hover:bg-brand-medium transition-all duration-300 shadow-xl hover:shadow-2xl">
+                        Agendar sessão
                     </button>
-                    <a href="#portfolio" class="w-full sm:w-auto bg-transparent text-brand-black border border-brand-black px-8 py-4 rounded-full text-lg font-medium hover:bg-brand-gray-light transition-all duration-300">
+                    <a href="#portfolio" class="w-full sm:w-auto bg-white/80 backdrop-blur-md text-brand-dark border border-gray-300 px-8 py-4 rounded-full text-base font-medium hover:bg-white transition-all duration-300 shadow-xs">
                         Ver Portfólio
                     </a>
                 </div>
             </div>
         </section>
 
-        <section id="portfolio" class="relative py-24 bg-brand-white overflow-hidden">
-            <div id="portfolio-bg-container" class="absolute inset-0 z-0 opacity-50 md:opacity-40">
+        <section id="portfolio" class="relative py-24 bg-white overflow-hidden">
+            <div id="portfolio-bg-container" class="absolute inset-0 z-0 opacity-40 md:opacity-30">
                 <img id="portfolio-display-bg" src="" alt="Capa Portfólio" class="w-full h-full object-cover">
             </div>
-            <div class="absolute inset-0 z-0 bg-white/70 backdrop-blur-sm"></div>
+            <div class="absolute inset-0 z-0 bg-white/80 backdrop-blur-md"></div>
 
             <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-16">
-                    <h2 class="font-serif text-4xl font-bold text-brand-black mb-4">Portfólio</h2>
-                    <div class="w-16 h-1 bg-brand-gray-dark mx-auto mb-6"></div>
-                    <p class="text-brand-gray-dark font-light">Explore todos os ensaios e galerias completas em nossa plataforma oficial.</p>
+                    <span class="text-xs uppercase tracking-[0.3em] text-brand-medium mb-2 block font-medium">Galeria Oficial</span>
+                    <h2 class="font-serif text-3xl sm:text-4xl font-bold text-brand-dark mb-4">Portfólio</h2>
+                    <div class="w-16 h-1 bg-brand-medium mx-auto mb-6 rounded-full"></div>
+                    <p class="text-brand-medium font-light max-w-lg mx-auto text-sm sm:text-base">Explore todos os ensaios e galerias completas em nossa plataforma externa.</p>
                 </div>
 
                 <div class="max-w-2xl mx-auto">
-                    <a href="https://thaisdenisy.pixieset.com/" target="_blank" class="group block relative overflow-hidden rounded-2xl shadow-2xl transition-all duration-500 transform hover:-translate-y-1 bg-brand-black">
-                        <div class="absolute inset-0 z-0 opacity-50 group-hover:opacity-60 transition-opacity duration-500">
+                    <a href="https://thaisdenisy.pixieset.com/" target="_blank" class="group block relative overflow-hidden rounded-3xl shadow-2xl transition-all duration-500 transform hover:-translate-y-1 bg-brand-dark border border-gray-800">
+                        <div class="absolute inset-0 z-0 opacity-40 group-hover:opacity-50 transition-opacity duration-500">
                             <img id="portfolio-card-img" src="" alt="Portfólio Thaís Denisy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
                         </div>
-                        <div class="relative z-10 p-12 text-center flex flex-col items-center justify-center min-h-[320px]">
-                            <div class="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <div class="relative z-10 p-8 sm:p-12 text-center flex flex-col items-center justify-center min-h-[340px]">
+                            <div class="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
                                 <i class="fas fa-images text-2xl"></i>
                             </div>
-                            <h3 class="font-serif text-3xl font-bold text-white mb-3">Acessar Portfólio Completo</h3>
-                            <p class="text-gray-100 font-light max-w-md mb-8 text-sm sm:text-base">Clique aqui para abrir todas as galerias de ensaios, casamentos e retratos no Pixieset.</p>
-                            <span class="inline-flex items-center bg-white text-brand-black px-8 py-3.5 rounded-full font-medium text-sm shadow-lg group-hover:bg-brand-gray-light transition-colors">
+                            <h3 class="font-serif text-2xl sm:text-3xl font-bold text-white mb-3">Acessar Portfólio Completo</h3>
+                            <p class="text-gray-200 font-light max-w-md mb-8 text-sm sm:text-base leading-relaxed">Clique aqui para abrir todas as galerias de ensaios, casamentos e retratos no Pixieset.</p>
+                            <span class="inline-flex items-center bg-white text-brand-dark px-8 py-3.5 rounded-full font-medium text-sm shadow-xl group-hover:bg-brand-light transition-all">
                                 Visitar Pixieset <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                             </span>
                         </div>
@@ -1050,153 +1034,155 @@ async function uploadImage(file, folder) {
             </div>
         </section>
 
-        <section id="sobre" class="py-24 bg-brand-gray-light">
+        <section id="sobre" class="py-24 bg-brand-light border-y border-gray-200/60">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
                     <div class="w-full lg:w-1/2">
                         <div class="relative">
-                            <div class="absolute inset-0 bg-brand-black rounded-2xl transform translate-x-4 translate-y-4 opacity-10"></div>
-                            <img id="about-display-img" src="" alt="Thaís Denisy" class="relative z-10 w-full h-auto md:h-[500px] aspect-[4/5] md:aspect-auto object-cover object-top rounded-2xl shadow-xl image-hover-effect">
+                            <div class="absolute inset-0 bg-brand-dark rounded-3xl transform translate-x-4 translate-y-4 opacity-10"></div>
+                            <img id="about-display-img" src="" alt="Thaís Denisy" class="relative z-10 w-full h-auto md:h-[500px] aspect-[4/5] md:aspect-auto object-cover object-top rounded-3xl shadow-2xl image-hover-effect">
                         </div>
                     </div>
                     
                     <div class="w-full lg:w-1/2">
-                        <h2 class="font-serif text-4xl font-bold text-brand-black mb-4">Sobre Mim</h2>
-                        <div class="w-16 h-1 bg-brand-gray-dark mb-6"></div>
+                        <span class="text-xs uppercase tracking-[0.3em] text-brand-medium mb-2 block font-medium">Conheça a Profissional</span>
+                        <h2 class="font-serif text-3xl sm:text-4xl font-bold text-brand-dark mb-4">Sobre Mim</h2>
+                        <div class="w-16 h-1 bg-brand-medium mb-6 rounded-full"></div>
                         
                         <div class="flex flex-wrap gap-3 mb-6">
-                            <span class="bg-brand-black text-white px-4 py-1.5 rounded-full text-xs font-medium tracking-wide">
-                                <i class="fas fa-camera mr-1.5"></i> Ensaio Externo
+                            <span class="bg-brand-dark text-white px-4 py-2 rounded-full text-xs font-medium tracking-wide shadow-sm flex items-center">
+                                <i class="fas fa-camera mr-1.5 opacity-80"></i> Ensaio Externo
                             </span>
-                            <span class="bg-brand-gray-dark text-white px-4 py-1.5 rounded-full text-xs font-medium tracking-wide">
-                                <i class="fas fa-home mr-1.5"></i> Fotografia de Estúdio
+                            <span class="bg-brand-medium text-white px-4 py-2 rounded-full text-xs font-medium tracking-wide shadow-sm flex items-center">
+                                <i class="fas fa-home mr-1.5 opacity-80"></i> Fotografia de Estúdio
                             </span>
                         </div>
 
-                        <div id="about-display-text" class="text-brand-gray-dark font-light text-lg leading-relaxed space-y-4 whitespace-pre-line"></div>
+                        <div id="about-display-text" class="text-brand-medium font-light text-base sm:text-lg leading-relaxed space-y-4 whitespace-pre-line"></div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="faq" class="py-24 bg-brand-white">
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="faq" class="py-24 bg-white">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-16">
-                    <h2 class="font-serif text-4xl font-bold text-brand-black mb-4">Dúvidas Frequentes</h2>
-                    <div class="w-16 h-1 bg-brand-gray-dark mx-auto mb-6"></div>
-                    <p class="text-brand-gray-dark font-light">Tudo o que você precisa saber sobre o meu trabalho.</p>
+                    <span class="text-xs uppercase tracking-[0.3em] text-brand-medium mb-2 block font-medium">Tire Suas Dúvidas</span>
+                    <h2 class="font-serif text-3xl sm:text-4xl font-bold text-brand-dark mb-4">Dúvidas Frequentes</h2>
+                    <div class="w-16 h-1 bg-brand-medium mx-auto mb-6 rounded-full"></div>
+                    <p class="text-brand-medium font-light text-sm sm:text-base">Tudo o que você precisa saber sobre o meu trabalho e atendimento.</p>
                 </div>
 
                 <div id="faq-list" class="space-y-4"></div>
             </div>
         </section>
 
-        <section id="admin-panel" class="hidden py-24 bg-white border-y border-gray-200">
+        <section id="admin-panel" class="hidden py-24 bg-gray-50 border-t border-gray-200">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="bg-brand-gray-light rounded-3xl shadow-2xl p-8 md:p-12 border border-gray-100">
-                    <div class="flex justify-between items-center mb-10 pb-6 border-b border-gray-300">
+                <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-12 border border-gray-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 pb-6 border-b border-gray-200 gap-4">
                         <div>
-                            <h2 class="font-serif text-3xl font-bold text-brand-black">Painel Administrativo Cloud</h2>
-                            <p class="text-brand-gray-dark mt-2 text-sm">Gerencie fotos e conteúdos em tempo real para todos os clientes.</p>
+                            <h2 class="font-serif text-2xl sm:text-3xl font-bold text-brand-dark">Painel Administrativo Cloud</h2>
+                            <p class="text-brand-medium mt-1 text-sm">Gerencie fotos e conteúdos em tempo real para todos os clientes.</p>
                         </div>
-                        <button onclick="logoutAdmin()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors">Sair do Painel</button>
+                        <button onclick="logoutAdmin()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-xl text-sm font-medium transition-colors">Sair do Painel</button>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div>
-                            <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-image mr-2 text-brand-gray-dark"></i> Foto Capa (Início)</h3>
-                            <form id="edit-home-form" class="space-y-4 bg-white p-5 rounded-2xl shadow-sm">
+                            <h3 class="font-bold text-base mb-4 flex items-center"><i class="fas fa-image mr-2 text-brand-medium"></i> Foto Capa (Início)</h3>
+                            <form id="edit-home-form" class="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-100">
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Escolher imagem do computador</label>
-                                    <input type="file" id="admin-home-file" accept="image/*" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm bg-white">
-                                    <p class="text-[11px] text-gray-500 mt-1">JPG, PNG ou WebP • máximo 10 MB.</p>
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Escolher imagem do computador</label>
+                                    <input type="file" id="admin-home-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
+                                    <p class="text-[10px] text-gray-500 mt-1">JPG, PNG ou WebP • máx 10 MB.</p>
                                 </div>
-                                <div id="home-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                                    <img id="home-upload-preview-img" src="" alt="Prévia da capa" class="w-full h-40 object-cover">
+                                <div id="home-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-white">
+                                    <img id="home-upload-preview-img" src="" alt="Prévia da capa" class="w-full h-36 object-cover">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Ou usar URL da imagem</label>
-                                    <input type="url" id="admin-home-img" placeholder="https://..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Ou usar URL da imagem</label>
+                                    <input type="url" id="admin-home-img" placeholder="https://..." class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
                                 </div>
-                                <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
-                                    <i class="fas fa-cloud-upload-alt mr-2"></i> Salvar Capa Início
+                                <button type="submit" class="w-full bg-brand-dark text-white py-2.5 rounded-xl font-medium hover:bg-brand-medium transition-colors text-xs shadow-sm">
+                                    <i class="fas fa-cloud-upload-alt mr-1.5"></i> Salvar Capa Início
                                 </button>
                             </form>
                             <div id="home-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
                         </div>
 
                         <div>
-                            <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-images mr-2 text-brand-gray-dark"></i> Capa do Portfólio</h3>
-                            <form id="edit-portfolio-form" class="space-y-4 bg-white p-5 rounded-2xl shadow-sm">
+                            <h3 class="font-bold text-base mb-4 flex items-center"><i class="fas fa-images mr-2 text-brand-medium"></i> Capa do Portfólio</h3>
+                            <form id="edit-portfolio-form" class="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-100">
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Escolher imagem do computador</label>
-                                    <input type="file" id="admin-portfolio-file" accept="image/*" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm bg-white">
-                                    <p class="text-[11px] text-gray-500 mt-1">JPG, PNG ou WebP • máximo 10 MB.</p>
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Escolher imagem do computador</label>
+                                    <input type="file" id="admin-portfolio-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
+                                    <p class="text-[10px] text-gray-500 mt-1">JPG, PNG ou WebP • máx 10 MB.</p>
                                 </div>
-                                <div id="portfolio-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                                    <img id="portfolio-upload-preview-img" src="" alt="Prévia da capa do portfólio" class="w-full h-40 object-cover">
+                                <div id="portfolio-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-white">
+                                    <img id="portfolio-upload-preview-img" src="" alt="Prévia da capa do portfólio" class="w-full h-36 object-cover">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Ou usar URL da imagem</label>
-                                    <input type="url" id="admin-portfolio-img" placeholder="https://..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Ou usar URL da imagem</label>
+                                    <input type="url" id="admin-portfolio-img" placeholder="https://..." class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
                                 </div>
-                                <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
-                                    <i class="fas fa-cloud-upload-alt mr-2"></i> Salvar Capa Portfólio
+                                <button type="submit" class="w-full bg-brand-dark text-white py-2.5 rounded-xl font-medium hover:bg-brand-medium transition-colors text-xs shadow-sm">
+                                    <i class="fas fa-cloud-upload-alt mr-1.5"></i> Salvar Capa Portfólio
                                 </button>
                             </form>
                             <div id="portfolio-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
                         </div>
 
                         <div>
-                            <h3 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-user-edit mr-2 text-brand-gray-dark"></i> Perfil & Sobre</h3>
-                            <form id="edit-about-form" class="space-y-3 bg-white p-5 rounded-2xl shadow-sm">
+                            <h3 class="font-bold text-base mb-4 flex items-center"><i class="fas fa-user-edit mr-2 text-brand-medium"></i> Perfil & Sobre</h3>
+                            <form id="edit-about-form" class="space-y-3 bg-gray-50 p-5 rounded-2xl border border-gray-100">
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Escolher foto do computador</label>
-                                    <input type="file" id="admin-about-file" accept="image/*" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm bg-white">
-                                    <p class="text-[11px] text-gray-500 mt-1">JPG, PNG ou WebP • máximo 10 MB.</p>
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Escolher foto do computador</label>
+                                    <input type="file" id="admin-about-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
+                                    <p class="text-[10px] text-gray-500 mt-1">JPG, PNG ou WebP • máx 10 MB.</p>
                                 </div>
-                                <div id="about-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                                    <img id="about-upload-preview-img" src="" alt="Prévia da foto de perfil" class="w-full h-40 object-cover">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Ou usar URL da foto</label>
-                                    <input type="url" id="admin-about-img" placeholder="https://..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                <div id="about-upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-200 bg-white">
+                                    <img id="about-upload-preview-img" src="" alt="Prévia da foto de perfil" class="w-full h-36 object-cover">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-brand-black mb-1">Texto de Apresentação</label>
-                                    <textarea id="admin-about-text" required rows="3" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm resize-none"></textarea>
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Ou usar URL da foto</label>
+                                    <input type="url" id="admin-about-img" placeholder="https://..." class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
                                 </div>
-                                <button type="submit" class="w-full bg-brand-black text-white py-2.5 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors text-sm">
-                                    <i class="fas fa-cloud-upload-alt mr-2"></i> Salvar Sobre
+                                <div>
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Texto de Apresentação</label>
+                                    <textarea id="admin-about-text" required rows="3" class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs resize-none bg-white"></textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-brand-dark text-white py-2.5 rounded-xl font-medium hover:bg-brand-medium transition-colors text-xs shadow-sm">
+                                    <i class="fas fa-cloud-upload-alt mr-1.5"></i> Salvar Sobre
                                 </button>
                             </form>
                             <div id="about-feedback" class="mt-2 hidden p-2 rounded-lg text-xs font-medium text-center"></div>
                         </div>
                     </div>
 
-                    <div class="mt-12 pt-8 border-t border-gray-300">
+                    <div class="mt-12 pt-8 border-t border-gray-200">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div>
-                                <h3 class="font-bold text-xl mb-6 flex items-center"><i class="fas fa-question-circle mr-3 text-brand-gray-dark"></i> Adicionar Nova Dúvida (FAQ)</h3>
-                                <form id="add-faq-form" class="space-y-4 bg-white p-6 rounded-2xl shadow-sm">
+                                <h3 class="font-bold text-lg mb-6 flex items-center"><i class="fas fa-question-circle mr-2 text-brand-medium"></i> Adicionar Nova Dúvida (FAQ)</h3>
+                                <form id="add-faq-form" class="space-y-4 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                                     <div>
-                                        <label class="block text-sm font-medium text-brand-black mb-1">Pergunta</label>
-                                        <input type="text" id="faqQuestion" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm">
+                                        <label class="block text-xs font-medium text-brand-dark mb-1">Pergunta</label>
+                                        <input type="text" id="faqQuestion" required class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-brand-black mb-1">Resposta</label>
-                                        <textarea id="faqAnswer" required rows="3" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-black outline-none text-sm resize-none"></textarea>
+                                        <label class="block text-xs font-medium text-brand-dark mb-1">Resposta</label>
+                                        <textarea id="faqAnswer" required rows="3" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs resize-none bg-white"></textarea>
                                     </div>
-                                    <button type="submit" class="w-full bg-brand-black text-white py-3 rounded-lg font-medium hover:bg-brand-gray-dark transition-colors shadow-md">
+                                    <button type="submit" class="w-full bg-brand-dark text-white py-3 rounded-xl font-medium hover:bg-brand-medium transition-colors text-xs shadow-md">
                                         Adicionar Dúvida
                                     </button>
                                 </form>
-                                <div id="faq-feedback" class="mt-3 hidden p-3 rounded-lg text-sm font-medium text-center"></div>
+                                <div id="faq-feedback" class="mt-3 hidden p-3 rounded-xl text-xs font-medium text-center"></div>
                             </div>
                             
                             <div>
-                                <h3 class="font-bold text-xl mb-6 text-brand-black">Dúvidas Cadastradas</h3>
-                                <div id="admin-faqs-list" class="space-y-3 bg-white p-6 rounded-2xl shadow-sm max-h-[350px] overflow-y-auto"></div>
+                                <h3 class="font-bold text-lg mb-6 text-brand-dark">Dúvidas Cadastradas</h3>
+                                <div id="admin-faqs-list" class="space-y-3 bg-gray-50 p-6 rounded-2xl border border-gray-100 max-h-[350px] overflow-y-auto"></div>
                             </div>
                         </div>
                     </div>
@@ -1205,25 +1191,29 @@ async function uploadImage(file, folder) {
         </section>
     </main>
 
-    <footer class="bg-brand-black text-white py-12">
+    <footer class="bg-brand-dark text-white py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid md:grid-cols-3 gap-8 items-center text-center md:text-left">
                 <div>
-                    <h3 class="font-serif text-2xl font-bold uppercase tracking-wider mb-2">Thaís Denisy</h3>
-                    <p class="text-gray-400 font-light text-sm tracking-widest">Fotografia</p>
+                    <div class="flex items-center justify-center md:justify-start gap-2.5 mb-2">
+                        <div class="w-8 h-8 rounded-lg bg-white text-brand-dark flex items-center justify-center">
+                            <i class="fas fa-camera text-xs"></i>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 font-light text-xs tracking-widest uppercase">Thaís Denisy Fotografia</p>
                 </div>
                 <div class="flex justify-center space-x-6">
-                    <a href="https://wa.me/5516994137996" target="_blank" class="text-gray-400 hover:text-white transition-colors text-xl">
+                    <a href="https://wa.me/5516994137996" target="_blank" class="text-gray-400 hover:text-white transition-colors text-xl p-2 bg-gray-900 rounded-full border border-gray-800">
                         <i class="fab fa-whatsapp"></i>
                     </a>
-                    <a href="https://www.instagram.com/thaisdenisy.fotografia/" target="_blank" class="text-gray-400 hover:text-white transition-colors text-xl">
+                    <a href="https://www.instagram.com/thaisdenisy.fotografia/" target="_blank" class="text-gray-400 hover:text-white transition-colors text-xl p-2 bg-gray-900 rounded-full border border-gray-800">
                         <i class="fab fa-instagram"></i>
                     </a>
                 </div>
-                <div class="md:text-right text-gray-400 text-sm font-light flex flex-col md:items-end items-center">
+                <div class="md:text-right text-gray-400 text-xs font-light flex flex-col md:items-end items-center">
                     <p>&copy; <span id="year"></span> Thaís Denisy Fotografia.</p>
                     <p class="mt-1">Todos os direitos reservados.</p>
-                    <a href="#admin" class="mt-4 text-gray-400 hover:text-white transition-colors text-xs flex items-center bg-gray-900 px-3 py-1.5 rounded-md border border-gray-800">
+                    <a href="#admin" class="mt-3 text-gray-400 hover:text-white transition-colors text-xs flex items-center bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-800">
                         <i class="fas fa-lock mr-1.5"></i> Admin
                     </a>
                 </div>
@@ -1231,57 +1221,55 @@ async function uploadImage(file, folder) {
         </div>
     </footer>
 
-    <a href="https://wa.me/5516994137996" target="_blank" class="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white p-3.5 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300" title="Fale pelo WhatsApp">
-        <i class="fab fa-whatsapp text-2xl"></i>
+    <a href="https://wa.me/5516994137996" target="_blank" class="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300" title="Fale pelo WhatsApp">
+        <i class="fab fa-whatsapp text-3xl"></i>
     </a>
 
     <div id="booking-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="fixed inset-0 bg-brand-black bg-opacity-75 transition-opacity" onclick="closeBookingModal()"></div>
+        <div class="fixed inset-0 bg-[#2A251E] bg-opacity-75 backdrop-blur-xs transition-opacity" onclick="closeBookingModal()"></div>
 
         <div class="flex items-end sm:items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
-            <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full">
-                <button onclick="closeBookingModal()" class="absolute top-4 right-4 text-gray-400 hover:text-brand-black focus:outline-none">
-                    <i class="fas fa-times text-xl"></i>
+            <div class="relative bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-md w-full border border-gray-100">
+                <button onclick="closeBookingModal()" class="absolute top-5 right-5 text-gray-400 hover:text-brand-dark focus:outline-none p-2 bg-gray-50 rounded-full">
+                    <i class="fas fa-times text-sm"></i>
                 </button>
 
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                            <h3 class="text-2xl leading-6 font-serif font-bold text-brand-black mb-2">
-                                Consultar Disponibilidade
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-6 font-light">
-                                Preencha os dados abaixo e entrarei em contato via WhatsApp para confirmarmos.
-                            </p>
-                            
-                            <form id="booking-form" class="space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-brand-black mb-1">Data Desejada</label>
-                                        <input type="date" id="b-date" required class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-1 focus:ring-brand-black outline-none text-sm">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-brand-black mb-1">Horário</label>
-                                        <input type="time" id="b-time" required class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-1 focus:ring-brand-black outline-none text-sm">
-                                    </div>
+                <div class="bg-white px-6 pt-8 pb-6 sm:p-8">
+                    <div class="text-center sm:text-left w-full">
+                        <h3 class="text-2xl font-serif font-bold text-brand-dark mb-2">
+                            Agendar sessão
+                        </h3>
+                        <p class="text-xs sm:text-sm text-gray-500 mb-6 font-light leading-relaxed">
+                            Preencha os dados abaixo e entrarei em contato via WhatsApp para confirmarmos a sua sessão.
+                        </p>
+                        
+                        <form id="booking-form" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Data Desejada</label>
+                                    <input type="date" id="b-date" required class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-brand-black mb-1">Seu Nome</label>
-                                    <input type="text" id="b-name" required placeholder="Nome completo" class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-1 focus:ring-brand-black outline-none text-sm">
+                                    <label class="block text-xs font-medium text-brand-dark mb-1">Horário</label>
+                                    <input type="time" id="b-time" required class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-brand-black mb-1">Descrição do Ensaio (Opcional)</label>
-                                    <textarea id="b-desc" rows="3" placeholder="Ex: Casamento civil, ensaio de gestante, estúdio ou externo..." class="w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-1 focus:ring-brand-black outline-none text-sm resize-none"></textarea>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-brand-dark mb-1">Seu Nome</label>
+                                <input type="text" id="b-name" required placeholder="Nome completo" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-brand-dark mb-1">Descrição do Ensaio (Opcional)</label>
+                                <textarea id="b-desc" rows="3" placeholder="Ex: Casamento civil, ensaio de gestante, estúdio ou externo..." class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs resize-none bg-white"></textarea>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="button" onclick="submitBooking()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-black text-base font-medium text-white hover:bg-brand-gray-dark sm:ml-3 sm:w-auto sm:text-sm">
-                        <i class="fab fa-whatsapp mr-2 mt-1"></i> Enviar WhatsApp
+                <div class="bg-gray-50 px-6 py-4 sm:px-8 sm:flex sm:flex-row-reverse gap-2">
+                    <button type="button" onclick="submitBooking()" class="w-full inline-flex justify-center items-center rounded-xl shadow-md px-5 py-3 bg-brand-dark text-sm font-medium text-white hover:bg-brand-medium sm:w-auto transition-colors">
+                        <i class="fab fa-whatsapp mr-2 text-base"></i> Enviar WhatsApp
                     </button>
-                    <button type="button" onclick="closeBookingModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    <button type="button" onclick="closeBookingModal()" class="mt-2 sm:mt-0 w-full inline-flex justify-center items-center rounded-xl border border-gray-200 shadow-xs px-5 py-3 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto transition-colors">
                         Cancelar
                     </button>
                 </div>
@@ -1290,21 +1278,21 @@ async function uploadImage(file, folder) {
     </div>
 
     <div id="custom-alert" class="fixed inset-0 z-[70] hidden items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black bg-opacity-50" onclick="closeAlert()"></div>
-        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full relative z-10 text-center" id="custom-alert-content">
-            <h3 class="text-lg font-bold mb-2 text-brand-black" id="alert-title">Aviso</h3>
-            <p class="text-brand-gray-dark mb-6 text-sm" id="alert-message"></p>
-            <button onclick="closeAlert()" class="bg-brand-black text-white px-6 py-2 rounded-full font-medium hover:bg-brand-gray-dark w-full">OK</button>
+        <div class="fixed inset-0 bg-[#2A251E] bg-opacity-50 backdrop-blur-xs" onclick="closeAlert()"></div>
+        <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-xs w-full relative z-10 text-center border border-gray-100" id="custom-alert-content">
+            <h3 class="text-lg font-bold mb-2 text-brand-dark" id="alert-title">Aviso</h3>
+            <p class="text-brand-medium mb-6 text-xs sm:text-sm font-light leading-relaxed" id="alert-message"></p>
+            <button onclick="closeAlert()" class="bg-brand-dark text-white px-6 py-3 rounded-xl font-medium hover:bg-brand-medium w-full text-xs shadow-md transition-colors">OK</button>
         </div>
     </div>
     
-    <div id="admin-login-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-black bg-opacity-75 items-center justify-center flex">
-        <div class="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl">
-            <h3 class="text-xl font-serif font-bold text-center mb-4">Acesso Administrativo</h3>
-            <input type="password" id="admin-password-input" placeholder="Senha" class="w-full px-4 py-2 border rounded-lg mb-4 outline-none focus:border-brand-black">
+    <div id="admin-login-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-[#2A251E] bg-opacity-75 backdrop-blur-xs items-center justify-center flex">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full shadow-2xl border border-gray-100 mx-4">
+            <h3 class="text-xl font-serif font-bold text-center mb-4 text-brand-dark">Acesso Administrativo</h3>
+            <input type="password" id="admin-password-input" placeholder="Senha" class="w-full px-4 py-3 border border-gray-200 rounded-xl mb-4 outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark text-xs bg-gray-50">
             <div class="flex space-x-2">
-                <button onclick="cancelAdminLogin()" class="w-1/2 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">Cancelar</button>
-                <button onclick="verifyAdminPassword()" class="w-1/2 py-2 bg-brand-black text-white rounded-lg hover:bg-brand-gray-dark">Entrar</button>
+                <button onclick="cancelAdminLogin()" class="w-1/2 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-xs font-medium transition-colors">Cancelar</button>
+                <button onclick="verifyAdminPassword()" class="w-1/2 py-3 bg-brand-dark text-white rounded-xl hover:bg-brand-medium text-xs font-medium shadow-md transition-colors">Entrar</button>
             </div>
         </div>
     </div>
