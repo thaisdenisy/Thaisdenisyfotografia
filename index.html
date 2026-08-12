@@ -78,6 +78,7 @@
     const WHATSAPP_NUMBER = "5516994137996";
     const ADMIN_PASS = "Denisy2026";
     const SITE_DOC_PATH = ["site", "config"];
+    const TESTIMONIALS_DOC_PATH = ["siteContent", "testimonials"];
     const IMAGE_DOCS = { home: ["siteImages", "home"], portfolio: ["siteImages", "portfolio"], about: ["siteImages", "about"] };
     const LOCAL_STORAGE_KEY = "thais_denisy_site_data_v2";
 
@@ -126,7 +127,7 @@
                     ...parsed,
                     about: { ...defaultSiteData.about, ...(parsed.about || {}) },
                     faqs: Array.isArray(parsed.faqs) && parsed.faqs.length > 0 ? parsed.faqs : defaultSiteData.faqs,
-                    testimonials: Array.isArray(parsed.testimonials) && parsed.testimonials.length > 0 ? parsed.testimonials : defaultSiteData.testimonials
+                    testimonials: Array.isArray(parsed.testimonials) ? parsed.testimonials : defaultSiteData.testimonials
                 };
             }
         } catch (e) {}
@@ -205,6 +206,24 @@
             console.warn("Salvamento local realizado.", error);
         }
         return true;
+    }
+
+    async function saveTestimonialsToCloud(testimonials) {
+        const fb = await window.firebaseReady;
+        if (!fb || !fb.db) {
+            throw new Error("Não foi possível conectar ao Firebase. Tente novamente.");
+        }
+
+        const items = Array.isArray(testimonials) ? testimonials : [];
+        await setDoc(
+            doc(fb.db, ...TESTIMONIALS_DOC_PATH),
+            { items, updatedAt: Date.now() },
+            { merge: false }
+        );
+
+        const data = JSON.parse(JSON.stringify(getSiteData()));
+        data.testimonials = items;
+        saveLocalData(data);
     }
 
     async function uploadImage(file, folder) {
@@ -376,7 +395,7 @@
                                     ...(cloudData.about || {})
                                 },
                                 faqs: Array.isArray(cloudData.faqs) && cloudData.faqs.length > 0 ? cloudData.faqs : (loadLocalData().faqs || defaultSiteData.faqs),
-                                testimonials: Array.isArray(cloudData.testimonials) && cloudData.testimonials.length > 0 ? cloudData.testimonials : (loadLocalData().testimonials || defaultSiteData.testimonials)
+                                testimonials: Array.isArray(cloudData.testimonials) ? cloudData.testimonials : (loadLocalData().testimonials || defaultSiteData.testimonials)
                             };
                             saveLocalData(merged);
                             loadImagesFromCloud();
@@ -386,6 +405,23 @@
                     },
                     function (error) {
                         console.log("Modo offline ativo.");
+                    }
+                );
+
+                const testimonialsRef = doc(fb.db, ...TESTIMONIALS_DOC_PATH);
+                onSnapshot(
+                    testimonialsRef,
+                    function (testimonialSnap) {
+                        if (!testimonialSnap.exists()) return;
+                        const items = testimonialSnap.data()?.items;
+                        if (!Array.isArray(items)) return;
+
+                        const data = JSON.parse(JSON.stringify(getSiteData()));
+                        data.testimonials = items;
+                        saveLocalData(data);
+                    },
+                    function (error) {
+                        console.warn("Não foi possível sincronizar as avaliações.", error);
                     }
                 );
             }
@@ -891,15 +927,22 @@
                     return;
                 }
 
-                const data = JSON.parse(JSON.stringify(getSiteData()));
-                if (!Array.isArray(data.testimonials)) {
-                    data.testimonials = [];
-                }
-                data.testimonials.push({ name, text, rating });
+                try {
+                    const testimonials = Array.isArray(getSiteData().testimonials)
+                        ? JSON.parse(JSON.stringify(getSiteData().testimonials))
+                        : [];
+                    testimonials.push({ name, text, rating });
 
-                await saveSiteDataToCloud(data);
-                addTestimonialForm.reset();
-                showAdminFeedback("testimonial-feedback", "Avaliação adicionada com sucesso!", "bg-green-100 text-green-800");
+                    await saveTestimonialsToCloud(testimonials);
+                    addTestimonialForm.reset();
+                    showAdminFeedback("testimonial-feedback", "Avaliação salva para todos os dispositivos!", "bg-green-100 text-green-800");
+                } catch (error) {
+                    showAdminFeedback(
+                        "testimonial-feedback",
+                        error.message || "Não foi possível salvar a avaliação no Firebase.",
+                        "bg-red-100 text-red-800"
+                    );
+                }
             });
         }
 
@@ -1000,13 +1043,20 @@
     };
 
     window.deleteTestimonial = async function (index) {
-        const data = JSON.parse(JSON.stringify(getSiteData()));
-        if (!Array.isArray(data.testimonials)) {
-            data.testimonials = [];
+        try {
+            const testimonials = Array.isArray(getSiteData().testimonials)
+                ? JSON.parse(JSON.stringify(getSiteData().testimonials))
+                : [];
+            testimonials.splice(index, 1);
+            await saveTestimonialsToCloud(testimonials);
+            showAdminFeedback("testimonial-feedback", "Avaliação removida em todos os dispositivos!", "bg-green-100 text-green-800");
+        } catch (error) {
+            showAdminFeedback(
+                "testimonial-feedback",
+                error.message || "Não foi possível remover a avaliação do Firebase.",
+                "bg-red-100 text-red-800"
+            );
         }
-        data.testimonials.splice(index, 1);
-        await saveSiteDataToCloud(data);
-        showAdminFeedback("testimonial-feedback", "Avaliação removida com sucesso!", "bg-green-100 text-green-800");
     };
 
     </script>
