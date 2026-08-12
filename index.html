@@ -82,10 +82,10 @@
     const LOCAL_STORAGE_KEY = "thais_denisy_site_data_v2";
 
     const defaultSiteData = {
-        homePhoto: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
-        portfolioPhoto: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+        homePhoto: "",
+        portfolioPhoto: "",
         about: {
-            photoUrl: "https://images.unsplash.com/photo-1604072366595-e00508bf29db?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            photoUrl: "",
             text: "Olá! Sou Thaís Denisy, fotógrafa especializada tanto em ensaios externos quanto em fotografia de estúdio.\n\nAcredito que a fotografia é a arte de pausar o tempo. Seja na atmosfera natural e livre dos ensaios externos ou na sofisticação do estúdio, minha missão é capturar a essência verdadeira de cada momento.\n\nTransformo sentimentos em memórias vivas para você reviver para sempre!"
         },
         faqs: [
@@ -101,6 +101,18 @@
                 question: "Como funciona a entrega das fotos?",
                 answer: "As fotos são entregues em alta resolução por meio de uma galeria online privativa, onde você pode visualizar e baixar tudo de forma rápida e segura."
             }
+        ],
+        testimonials: [
+            {
+                name: "Mariana & Lucas",
+                text: "O ensaio foi simplesmente mágico! A Thaís tem um olhar único e nos deixou super à vontade do início ao fim. As fotos superaram todas as expectativas.",
+                rating: 5
+            },
+            {
+                name: "Camila Silva",
+                text: "Profissional impecável. O estúdio é lindo e aconchegante, e o resultado do ensaio de gestante ficou emocionante. Recomendo de olhos fechados!",
+                rating: 5
+            }
         ]
     };
 
@@ -113,7 +125,8 @@
                     ...JSON.parse(JSON.stringify(defaultSiteData)),
                     ...parsed,
                     about: { ...defaultSiteData.about, ...(parsed.about || {}) },
-                    faqs: Array.isArray(parsed.faqs) && parsed.faqs.length > 0 ? parsed.faqs : defaultSiteData.faqs
+                    faqs: Array.isArray(parsed.faqs) && parsed.faqs.length > 0 ? parsed.faqs : defaultSiteData.faqs,
+                    testimonials: Array.isArray(parsed.testimonials) && parsed.testimonials.length > 0 ? parsed.testimonials : defaultSiteData.testimonials
                 };
             }
         } catch (e) {}
@@ -362,7 +375,8 @@
                                     ...defaultSiteData.about,
                                     ...(cloudData.about || {})
                                 },
-                                faqs: Array.isArray(cloudData.faqs) && cloudData.faqs.length > 0 ? cloudData.faqs : (loadLocalData().faqs || defaultSiteData.faqs)
+                                faqs: Array.isArray(cloudData.faqs) && cloudData.faqs.length > 0 ? cloudData.faqs : (loadLocalData().faqs || defaultSiteData.faqs),
+                                testimonials: Array.isArray(cloudData.testimonials) && cloudData.testimonials.length > 0 ? cloudData.testimonials : (loadLocalData().testimonials || defaultSiteData.testimonials)
                             };
                             saveLocalData(merged);
                             loadImagesFromCloud();
@@ -442,26 +456,101 @@
         window.open(url, "_blank");
     };
 
+    const LEGACY_PLACEHOLDER_IMAGES = new Set([
+        "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1604072366595-e00508bf29db?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    ]);
+
+    function showImageWhenReady(image, source) {
+        if (!image) return;
+
+        if (!source || LEGACY_PLACEHOLDER_IMAGES.has(source)) {
+            image.style.opacity = "0";
+            image.removeAttribute("src");
+            return;
+        }
+
+        if (image.getAttribute("src") === source && image.complete && image.naturalWidth > 0) {
+            image.style.opacity = "1";
+            return;
+        }
+
+        image.style.opacity = "0";
+        image.style.transition = "opacity 300ms ease";
+        image.onload = function () {
+            image.style.opacity = "1";
+        };
+        image.onerror = function () {
+            image.style.opacity = "0";
+        };
+        image.src = source;
+    }
+
     function renderSiteContent() {
         const data = getSiteData();
 
         const homeBg = document.getElementById("home-display-bg");
-        if (homeBg) {
-            homeBg.src = data.homePhoto || defaultSiteData.homePhoto;
-        }
+        showImageWhenReady(homeBg, data.homePhoto || defaultSiteData.homePhoto);
 
         const portfolioBg = document.getElementById("portfolio-display-bg");
         const portfolioCard = document.getElementById("portfolio-card-img");
         const portfolioPhoto = data.portfolioPhoto || defaultSiteData.portfolioPhoto;
 
-        if (portfolioBg) portfolioBg.src = portfolioPhoto;
-        if (portfolioCard) portfolioCard.src = portfolioPhoto;
+        showImageWhenReady(portfolioBg, portfolioPhoto);
+        showImageWhenReady(portfolioCard, portfolioPhoto);
 
         const aboutImg = document.getElementById("about-display-img");
         const aboutText = document.getElementById("about-display-text");
 
-        if (aboutImg) aboutImg.src = data.about.photoUrl || defaultSiteData.about.photoUrl;
+        showImageWhenReady(aboutImg, data.about.photoUrl || defaultSiteData.about.photoUrl);
         if (aboutText) aboutText.textContent = data.about.text || defaultSiteData.about.text;
+
+        const testimonialList = document.getElementById("testimonial-list");
+        if (testimonialList) {
+            testimonialList.innerHTML = "";
+            const testimonials = (Array.isArray(data.testimonials) && data.testimonials.length > 0) ? data.testimonials : defaultSiteData.testimonials;
+
+            testimonials.forEach(function (t) {
+                const card = document.createElement("div");
+                card.className = "bg-brand-light border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between transition-all duration-300 hover:shadow-md";
+
+                const topDiv = document.createElement("div");
+                
+                const starsDiv = document.createElement("div");
+                starsDiv.className = "flex text-amber-500 mb-4 space-x-1";
+                const rating = t.rating || 5;
+                for (let i = 0; i < rating; i++) {
+                    const star = document.createElement("i");
+                    star.className = "fas fa-star text-sm";
+                    starsDiv.appendChild(star);
+                }
+
+                const textP = document.createElement("p");
+                textP.className = "text-brand-medium font-light italic leading-relaxed text-sm sm:text-base mb-6";
+                textP.textContent = `"${t.text}"`;
+
+                topDiv.appendChild(starsDiv);
+                topDiv.appendChild(textP);
+
+                const nameDiv = document.createElement("div");
+                nameDiv.className = "flex items-center pt-4 border-t border-gray-200/60";
+                
+                const avatarIcon = document.createElement("div");
+                avatarIcon.className = "w-10 h-10 rounded-full bg-brand-medium/20 text-brand-dark flex items-center justify-center font-serif font-bold text-sm mr-3";
+                avatarIcon.textContent = t.name ? t.name.charAt(0).toUpperCase() : "C";
+
+                const nameSpan = document.createElement("span");
+                nameSpan.className = "font-serif font-bold text-brand-dark text-base";
+                nameSpan.textContent = t.name;
+
+                nameDiv.appendChild(avatarIcon);
+                nameDiv.appendChild(nameSpan);
+
+                card.appendChild(topDiv);
+                card.appendChild(nameDiv);
+                testimonialList.appendChild(card);
+            });
+        }
 
         const faqList = document.getElementById("faq-list");
         if (faqList) {
@@ -518,6 +607,7 @@
         if (aboutText) aboutText.value = data.about.text || "";
 
         renderAdminFaqs();
+        renderAdminTestimonials();
     }
 
     window.toggleFaq = function (index) {
@@ -788,6 +878,31 @@
             });
         }
 
+        const addTestimonialForm = document.getElementById("add-testimonial-form");
+        if (addTestimonialForm) {
+            addTestimonialForm.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                const name = document.getElementById("testimonialName")?.value.trim() || "";
+                const text = document.getElementById("testimonialText")?.value.trim() || "";
+                const rating = parseInt(document.getElementById("testimonialRating")?.value || "5", 10);
+
+                if (!name || !text) {
+                    showAlert("Campos obrigatórios", "Preencha o nome do cliente e a avaliação.");
+                    return;
+                }
+
+                const data = JSON.parse(JSON.stringify(getSiteData()));
+                if (!Array.isArray(data.testimonials)) {
+                    data.testimonials = [];
+                }
+                data.testimonials.push({ name, text, rating });
+
+                await saveSiteDataToCloud(data);
+                addTestimonialForm.reset();
+                showAdminFeedback("testimonial-feedback", "Avaliação adicionada com sucesso!", "bg-green-100 text-green-800");
+            });
+        }
+
         const adminPassInput = document.getElementById("admin-password-input");
         if (adminPassInput) {
             adminPassInput.addEventListener("keypress", function (event) {
@@ -836,6 +951,44 @@
         });
     }
 
+    function renderAdminTestimonials() {
+        const list = document.getElementById("admin-testimonials-list");
+        if (!list) return;
+        const data = getSiteData();
+        const testimonials = data.testimonials || defaultSiteData.testimonials;
+        list.innerHTML = "";
+
+        testimonials.forEach(function (t, index) {
+            const item = document.createElement("div");
+            item.className = "flex justify-between items-start p-4 bg-gray-50 border border-gray-200 rounded-lg";
+
+            const text = document.createElement("div");
+            text.className = "pr-4 w-full";
+
+            const name = document.createElement("p");
+            name.className = "font-bold text-sm text-brand-dark mb-1";
+            name.textContent = `${t.name} (${t.rating || 5} ★)`;
+
+            const desc = document.createElement("p");
+            desc.className = "text-xs text-gray-600 line-clamp-2 italic";
+            desc.textContent = `"${t.text}"`;
+
+            text.appendChild(name);
+            text.appendChild(desc);
+
+            const button = document.createElement("button");
+            button.className = "text-gray-400 hover:text-red-600 p-2 ml-2";
+            button.innerHTML = '<i class="fas fa-trash"></i>';
+            button.onclick = function () {
+                deleteTestimonial(index);
+            };
+
+            item.appendChild(text);
+            item.appendChild(button);
+            list.appendChild(item);
+        });
+    }
+
     window.deleteFaq = async function (index) {
         const data = JSON.parse(JSON.stringify(getSiteData()));
         if (!Array.isArray(data.faqs)) {
@@ -844,6 +997,16 @@
         data.faqs.splice(index, 1);
         await saveSiteDataToCloud(data);
         showAdminFeedback("faq-feedback", "Dúvida removida com sucesso!", "bg-green-100 text-green-800");
+    };
+
+    window.deleteTestimonial = async function (index) {
+        const data = JSON.parse(JSON.stringify(getSiteData()));
+        if (!Array.isArray(data.testimonials)) {
+            data.testimonials = [];
+        }
+        data.testimonials.splice(index, 1);
+        await saveSiteDataToCloud(data);
+        showAdminFeedback("testimonial-feedback", "Avaliação removida com sucesso!", "bg-green-100 text-green-800");
     };
 
     </script>
@@ -938,6 +1101,7 @@
                     <a href="#home" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Início</a>
                     <a href="#portfolio" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Portfólio</a>
                     <a href="#sobre" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Sobre</a>
+                    <a href="#avaliacoes" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Avaliações</a>
                     <a href="#faq" class="text-brand-medium hover:text-brand-dark px-3 py-2 text-sm font-medium transition-colors">Dúvidas</a>
                 </nav>
 
@@ -960,6 +1124,7 @@
                 <a href="#home" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Início</a>
                 <a href="#portfolio" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Portfólio</a>
                 <a href="#sobre" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Sobre</a>
+                <a href="#avaliacoes" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Avaliações</a>
                 <a href="#faq" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-4 py-3 rounded-xl text-base font-medium text-brand-medium hover:text-brand-dark hover:bg-brand-light transition-colors">Dúvidas</a>
                 <div class="pt-2">
                     <button onclick="openBookingModal(); document.getElementById('mobile-menu').classList.add('hidden');" class="w-full text-center bg-brand-dark text-white px-6 py-3.5 rounded-xl font-medium text-base shadow-md">
@@ -1064,7 +1229,20 @@
             </div>
         </section>
 
-        <section id="faq" class="py-24 bg-white">
+        <section id="avaliacoes" class="py-24 bg-white">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <span class="text-xs uppercase tracking-[0.3em] text-brand-medium mb-2 block font-medium">Depoimentos</span>
+                    <h2 class="font-serif text-3xl sm:text-4xl font-bold text-brand-dark mb-4">Avaliações dos Clientes</h2>
+                    <div class="w-16 h-1 bg-brand-medium mx-auto mb-6 rounded-full"></div>
+                    <p class="text-brand-medium font-light text-sm sm:text-base">Veja o carinho e a experiência de quem já viveu esse momento conosco.</p>
+                </div>
+
+                <div id="testimonial-list" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
+            </div>
+        </section>
+
+        <section id="faq" class="py-24 bg-brand-light/40 border-t border-gray-200/60">
             <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-16">
                     <span class="text-xs uppercase tracking-[0.3em] text-brand-medium mb-2 block font-medium">Tire Suas Dúvidas</span>
@@ -1163,6 +1341,41 @@
                     <div class="mt-12 pt-8 border-t border-gray-200">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div>
+                                <h3 class="font-bold text-lg mb-6 flex items-center"><i class="fas fa-star mr-2 text-brand-medium"></i> Adicionar Avaliação de Cliente</h3>
+                                <form id="add-testimonial-form" class="space-y-4 bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                                    <div>
+                                        <label class="block text-xs font-medium text-brand-dark mb-1">Nome do Cliente / Família</label>
+                                        <input type="text" id="testimonialName" required placeholder="Ex: Ana & Pedro" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-brand-dark mb-1">Nota (1 a 5 estrelas)</label>
+                                        <select id="testimonialRating" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs bg-white">
+                                            <option value="5">5 Estrelas (★★★★★)</option>
+                                            <option value="4">4 Estrelas (★★★★☆)</option>
+                                            <option value="3">3 Estrelas (★★★☆☆)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-brand-dark mb-1">Texto da Avaliação</label>
+                                        <textarea id="testimonialText" required rows="3" placeholder="Depoimento do cliente..." class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-dark outline-none text-xs resize-none bg-white"></textarea>
+                                    </div>
+                                    <button type="submit" class="w-full bg-brand-dark text-white py-3 rounded-xl font-medium hover:bg-brand-medium transition-colors text-xs shadow-md">
+                                        Adicionar Avaliação
+                                    </button>
+                                </form>
+                                <div id="testimonial-feedback" class="mt-3 hidden p-3 rounded-xl text-xs font-medium text-center"></div>
+                            </div>
+
+                            <div>
+                                <h3 class="font-bold text-lg mb-6 text-brand-dark">Avaliações Cadastradas</h3>
+                                <div id="admin-testimonials-list" class="space-y-3 bg-gray-50 p-6 rounded-2xl border border-gray-100 max-h-[350px] overflow-y-auto"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-12 pt-8 border-t border-gray-200">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div>
                                 <h3 class="font-bold text-lg mb-6 flex items-center"><i class="fas fa-question-circle mr-2 text-brand-medium"></i> Adicionar Nova Dúvida (FAQ)</h3>
                                 <form id="add-faq-form" class="space-y-4 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                                     <div>
@@ -1196,25 +1409,28 @@
             <div class="grid md:grid-cols-3 gap-8 items-center text-center md:text-left">
                 <div>
                     <div class="flex items-center justify-center md:justify-start gap-2.5 mb-2">
-                        <div class="w-8 h-8 rounded-lg bg-white text-brand-dark flex items-center justify-center">
-                            <i class="fas fa-camera text-xs"></i>
+                        <div class="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center backdrop-blur-md shadow-inner border border-white/20">
+                            <i class="fas fa-camera text-sm"></i>
                         </div>
                     </div>
-                    <p class="text-gray-400 font-light text-xs tracking-widest uppercase">Thaís Denisy Fotografia</p>
+                    <p class="text-gray-300 font-light text-xs tracking-widest uppercase">Thaís Denisy Fotografia</p>
+                    <a href="https://share.google/u0prhRuK6RwuNQ7ia" target="_blank" class="mt-3 inline-flex items-center text-gray-200 hover:text-white text-xs font-light transition-colors bg-white/10 px-3.5 py-2 rounded-xl border border-white/20">
+                        <i class="fas fa-map-marker-alt text-brand-medium mr-2 text-sm"></i> Encontre nosso estúdio
+                    </a>
                 </div>
                 <div class="flex justify-center space-x-6">
-                    <a href="https://wa.me/5516994137996" target="_blank" class="text-gray-400 hover:text-white transition-colors text-xl p-2 bg-gray-900 rounded-full border border-gray-800">
+                    <a href="https://wa.me/5516994137996" target="_blank" class="text-gray-300 hover:text-white transition-colors text-xl p-3 bg-brand-medium/30 rounded-full border border-white/10 shadow-md">
                         <i class="fab fa-whatsapp"></i>
                     </a>
-                    <a href="https://www.instagram.com/thaisdenisy.fotografia/" target="_blank" class="text-gray-400 hover:text-white transition-colors text-xl p-2 bg-gray-900 rounded-full border border-gray-800">
+                    <a href="https://www.instagram.com/thaisdenisy.fotografia/" target="_blank" class="text-gray-300 hover:text-white transition-colors text-xl p-3 bg-brand-medium/30 rounded-full border border-white/10 shadow-md">
                         <i class="fab fa-instagram"></i>
                     </a>
                 </div>
-                <div class="md:text-right text-gray-400 text-xs font-light flex flex-col md:items-end items-center">
+                <div class="md:text-right text-gray-300 text-xs font-light flex flex-col md:items-end items-center">
                     <p>&copy; <span id="year"></span> Thaís Denisy Fotografia.</p>
-                    <p class="mt-1">Todos os direitos reservados.</p>
-                    <a href="#admin" class="mt-3 text-gray-400 hover:text-white transition-colors text-xs flex items-center bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-800">
-                        <i class="fas fa-lock mr-1.5"></i> Admin
+                    <p class="mt-1">Uma promessa de Deus eternizada em cada detalhe.</p>
+                    <a href="#admin" class="mt-2 text-gray-300 hover:text-white transition-colors text-xs flex items-center bg-brand-medium/30 px-3.5 py-2 rounded-xl border border-white/10">
+                        <i class="fas fa-lock mr-2"></i> Admin
                     </a>
                 </div>
             </div>
