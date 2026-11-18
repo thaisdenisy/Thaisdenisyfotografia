@@ -703,42 +703,47 @@
         history.pushState("", document.title, window.location.pathname);
     };
 
-    window.verifyAdminPassword = async function () {
-  const input = document.getElementById("admin-password-input");
-  const password = input?.value || "";
+window.verifyAdminPassword = async function () {
+    const emailInput = document.getElementById("admin-email-input");
+    const passwordInput = document.getElementById("admin-password-input");
 
-  if (!password) {
-    showAlert("Atenção", "Digite sua senha.");
-    return;
-  }
+    const email = emailInput?.value.trim() || "";
+    const password = passwordInput?.value || "";
 
-  try {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      ADMIN_EMAIL,
-      password
-    );
-
-    isAuthenticated = true;
-
-    if (input) input.value = "";
-
-    showAdminPanel();
-
-  } catch (error) {
-    console.error("Erro no login administrativo:", error);
-
-    let message = "Não foi possível entrar. Verifique sua senha.";
-
-    if (error.code === "auth/invalid-credential") {
-      message = "E-mail ou senha incorretos.";
-    } else if (error.code === "auth/too-many-requests") {
-      message = "Muitas tentativas. Aguarde um pouco e tente novamente.";
+    if (!email || !password) {
+        showAlert("Atenção", "Preencha o e-mail e a senha.");
+        return;
     }
 
-    showAlert("Falha no acesso", message);
-  }
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+
+        isAuthenticated = true;
+
+        if (passwordInput) passwordInput.value = "";
+
+        if (loginModalAdmin) {
+            loginModalAdmin.classList.add("hidden");
+            loginModalAdmin.classList.remove("flex");
+        }
+
+        showAdminPanel();
+
+    } catch (error) {
+        console.error("Erro no login administrativo:", error);
+
+        let message = "E-mail ou senha incorretos.";
+
+        if (error.code === "auth/too-many-requests") {
+            message = "Muitas tentativas. Aguarde um pouco e tente novamente.";
+        } else if (error.code === "auth/network-request-failed") {
+            message = "Falha de conexão. Verifique sua internet.";
+        }
+
+        showAlert("Falha no acesso", message);
+    }
 };
+
    window.logoutAdmin = async function () {
     try {
         await signOut(auth);
@@ -1594,15 +1599,39 @@
         </div>
     </div>
     
-    <div id="admin-login-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-[#2A251E] bg-opacity-75 backdrop-blur-xs items-center justify-center flex">
-        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full shadow-2xl border border-gray-100 mx-4">
-            <h3 class="text-xl font-serif font-bold text-center mb-4 text-brand-dark">Acesso Administrativo</h3>
-            <input type="password" id="admin-password-input" placeholder="Senha" class="w-full px-4 py-3 border border-gray-200 rounded-xl mb-4 outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark text-xs bg-gray-50">
-            <div class="flex space-x-2">
-                <button onclick="cancelAdminLogin()" class="w-1/2 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-xs font-medium transition-colors">Cancelar</button>
-                <button onclick="verifyAdminPassword()" class="w-1/2 py-3 bg-brand-dark text-white rounded-xl hover:bg-brand-medium text-xs font-medium shadow-md transition-colors">Entrar</button>
-            </div>
+    
+<div id="admin-login-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-[#2A251E] bg-opacity-75 backdrop-blur-xs items-center justify-center flex">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full shadow-2xl border border-gray-100 mx-4">
+
+        <h3 class="text-xl font-serif font-bold text-center mb-6 text-brand-dark">
+            Acesso Administrativo
+        </h3>
+
+        <input
+            type="email"
+            id="admin-email-input"
+            value="admin@thaisdenisy.app"
+            placeholder="Seu e-mail"
+            autocomplete="username"
+            class="w-full px-4 py-3 border border-gray-200 rounded-xl mb-3 outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark text-xs bg-gray-50"
+        >
+
+        <input
+            type="password"
+            id="admin-password-input"
+            placeholder="Sua senha"
+            autocomplete="current-password"
+            class="w-full px-4 py-3 border border-gray-200 rounded-xl mb-4 outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark text-xs bg-gray-50"
+        >
+
+        <div class="flex space-x-2">
+            <button onclick="cancelAdminLogin()" class="w-1/2 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-xs font-medium transition-colors">
+                Cancelar
+            </button>
+
+            <button onclick="verifyAdminPassword()" class="w-1/2 py-3 bg-brand-dark text-white rounded-xl hover:bg-brand-medium text-xs font-medium shadow-md transition-colors">
+                Entrar
+            </button>
         </div>
     </div>
-</body>
-</html>
+</div>
