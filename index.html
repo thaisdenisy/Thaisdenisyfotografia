@@ -18,7 +18,7 @@
     ========================================================= */
 
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+   import {getAuth, signInAnonymously, signInWithCustomToken, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -76,7 +76,7 @@
     ========================================================= */
 
     const WHATSAPP_NUMBER = "5516994137996";
-    const ADMIN_PASS = "Denisy2026";
+    const ADMIN_EMAIL = "admin@thaisdenisy.app";
     const SITE_DOC_PATH = ["site", "config"];
     const TESTIMONIALS_DOC_PATH = ["siteContent", "testimonials"];
     const IMAGE_DOCS = { home: ["siteImages", "home"], portfolio: ["siteImages", "portfolio"], about: ["siteImages", "about"] };
@@ -703,28 +703,70 @@
         history.pushState("", document.title, window.location.pathname);
     };
 
-    window.verifyAdminPassword = function () {
-        const input = document.getElementById("admin-password-input");
-        const password = input?.value || "";
+    window.verifyAdminPassword = async function () {
+  const input = document.getElementById("admin-password-input");
+  const password = input?.value || "";
 
-        if (password === ADMIN_PASS) {
-            isAuthenticated = true;
-            if (loginModalAdmin) {
-                loginModalAdmin.classList.add("hidden");
-                loginModalAdmin.classList.remove("flex");
-            }
-            showAdminPanel();
-        } else {
-            showAlert("Acesso Negado", "Senha incorreta.");
-        }
-    };
+  if (!password) {
+    showAlert("Atenção", "Digite sua senha.");
+    return;
+  }
 
-    window.logoutAdmin = function () {
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      ADMIN_EMAIL,
+      password
+    );
+
+    isAuthenticated = true;
+
+    if (input) input.value = "";
+
+    showAdminPanel();
+
+  } catch (error) {
+    console.error("Erro no login administrativo:", error);
+
+    let message = "Não foi possível entrar. Verifique sua senha.";
+
+    if (error.code === "auth/invalid-credential") {
+      message = "E-mail ou senha incorretos.";
+    } else if (error.code === "auth/too-many-requests") {
+      message = "Muitas tentativas. Aguarde um pouco e tente novamente.";
+    }
+
+    showAlert("Falha no acesso", message);
+  }
+};
+   window.logoutAdmin = async function () {
+    try {
+        await signOut(auth);
+
         isAuthenticated = false;
+
+        // Inicia uma nova sessão anônima para o visitante.
+        try {
+            await signInAnonymously(auth);
+        } catch (error) {
+            console.warn("Não foi possível iniciar sessão anônima:", error);
+        }
+
         history.pushState("", document.title, window.location.pathname);
         hideAdminPanel();
+
+        if (loginModalAdmin) {
+            loginModalAdmin.classList.add("hidden");
+            loginModalAdmin.classList.remove("flex");
+        }
+
         window.scrollTo({ top: 0, behavior: "smooth" });
-    };
+
+    } catch (error) {
+        console.error("Erro ao sair do painel:", error);
+        showAlert("Erro", "Não foi possível encerrar a sessão. Tente novamente.");
+    }
+};
 
     function showAdminPanel() {
         const panel = document.getElementById("admin-panel");
